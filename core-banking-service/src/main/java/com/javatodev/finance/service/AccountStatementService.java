@@ -46,12 +46,27 @@ public class AccountStatementService {
 
         BigDecimal currentBalance = account.getAvailableBalance();
         List<TransactionHistoryDto> transactions = new ArrayList<>();
+        List<TransactionEntity> content = transactionPage.getContent();
 
-        for (TransactionEntity entity : transactionPage.getContent()) {
-            BigDecimal sumAfter = transactionRepository.sumAllTransactionsAfterDate(
-                accountNumber, entity.getCreatedAt());
-            BigDecimal runningBalance = currentBalance.subtract(sumAfter);
-            transactions.add(mapToDto(entity, runningBalance));
+        if (!content.isEmpty()) {
+            BigDecimal sumAfterFirst = transactionRepository.sumAllTransactionsAfterDate(
+                accountNumber, content.get(0).getCreatedAt());
+            BigDecimal runningBalance = currentBalance.subtract(sumAfterFirst);
+            transactions.add(mapToDto(content.get(0), runningBalance));
+
+            if (transactionType == null) {
+                for (int i = 1; i < content.size(); i++) {
+                    runningBalance = runningBalance.subtract(content.get(i - 1).getAmount());
+                    transactions.add(mapToDto(content.get(i), runningBalance));
+                }
+            } else {
+                for (int i = 1; i < content.size(); i++) {
+                    BigDecimal sumAfter = transactionRepository.sumAllTransactionsAfterDate(
+                        accountNumber, content.get(i).getCreatedAt());
+                    runningBalance = currentBalance.subtract(sumAfter);
+                    transactions.add(mapToDto(content.get(i), runningBalance));
+                }
+            }
         }
 
         return StatementResponse.builder()
@@ -116,14 +131,8 @@ public class AccountStatementService {
 
     private BigDecimal computeOpeningBalance(String accountNumber, LocalDateTime monthStart,
                                               BigDecimal currentBalance) {
-        List<TransactionEntity> allFromMonthStart = transactionRepository.findByAccountAndDateRange(
-            accountNumber, monthStart, LocalDateTime.now());
-
-        BigDecimal totalSinceMonthStart = BigDecimal.ZERO;
-        for (TransactionEntity tx : allFromMonthStart) {
-            totalSinceMonthStart = totalSinceMonthStart.add(tx.getAmount());
-        }
-
+        BigDecimal totalSinceMonthStart = transactionRepository.sumAllTransactionsFromDate(
+            accountNumber, monthStart);
         return currentBalance.subtract(totalSinceMonthStart);
     }
 

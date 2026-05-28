@@ -225,12 +225,6 @@ class AccountStatementServiceTest {
         when(transactionRepository.sumAllTransactionsAfterDate("100015003000",
             LocalDateTime.of(2025, 5, 3, 10, 0)))
             .thenReturn(BigDecimal.ZERO);
-        when(transactionRepository.sumAllTransactionsAfterDate("100015003000",
-            LocalDateTime.of(2025, 5, 2, 10, 0)))
-            .thenReturn(BigDecimal.valueOf(300));
-        when(transactionRepository.sumAllTransactionsAfterDate("100015003000",
-            LocalDateTime.of(2025, 5, 1, 10, 0)))
-            .thenReturn(BigDecimal.valueOf(100));
 
         StatementResponse response = accountStatementService.getAccountStatement(
             "100015003000", null, null, "ALL", 0, 20);
@@ -239,6 +233,7 @@ class AccountStatementServiceTest {
         assertEquals(BigDecimal.valueOf(1600), response.getTransactions().get(0).getRunningBalance());
         assertEquals(BigDecimal.valueOf(1300), response.getTransactions().get(1).getRunningBalance());
         assertEquals(BigDecimal.valueOf(1500), response.getTransactions().get(2).getRunningBalance());
+        verify(transactionRepository, times(1)).sumAllTransactionsAfterDate(any(), any());
     }
 
     @Test
@@ -300,9 +295,9 @@ class AccountStatementServiceTest {
             eq(LocalDateTime.of(2025, 5, 1, 0, 0)),
             eq(LocalDateTime.of(2025, 6, 1, 0, 0))))
             .thenReturn(List.of(credit, debit));
-        when(transactionRepository.findByAccountAndDateRange(eq("100015003000"),
-            eq(LocalDateTime.of(2025, 5, 1, 0, 0)), any(LocalDateTime.class)))
-            .thenReturn(List.of(credit, debit));
+        when(transactionRepository.sumAllTransactionsFromDate(eq("100015003000"),
+            eq(LocalDateTime.of(2025, 5, 1, 0, 0))))
+            .thenReturn(BigDecimal.valueOf(3000));
 
         MonthlySummaryResponse response = accountStatementService.getMonthlySummary("100015003000", 5, 2025);
 
@@ -333,6 +328,8 @@ class AccountStatementServiceTest {
         when(bankAccountRepository.findByNumber("100015003000")).thenReturn(Optional.of(account));
         when(transactionRepository.findByAccountAndDateRange(eq("100015003000"), any(), any()))
             .thenReturn(Collections.emptyList());
+        when(transactionRepository.sumAllTransactionsFromDate(eq("100015003000"), any()))
+            .thenReturn(BigDecimal.ZERO);
 
         MonthlySummaryResponse response = accountStatementService.getMonthlySummary("100015003000", 1, 2025);
 

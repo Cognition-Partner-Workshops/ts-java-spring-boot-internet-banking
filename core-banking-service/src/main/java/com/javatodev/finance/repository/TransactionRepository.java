@@ -47,4 +47,10 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
     BigDecimal sumAllTransactionsAfterDate(
         @Param("accountNumber") String accountNumber,
         @Param("afterDate") LocalDateTime afterDate);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM TransactionEntity t " +
+        "WHERE t.account.number = :accountNumber AND t.createdAt >= :fromDate")
+    BigDecimal sumAllTransactionsFromDate(
+        @Param("accountNumber") String accountNumber,
+        @Param("fromDate") LocalDateTime fromDate);
 }
