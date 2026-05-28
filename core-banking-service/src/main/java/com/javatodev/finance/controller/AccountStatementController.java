@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 @Tag(name = "Account Statement Controller", description = "APIs for account statements and transaction history")
 @RestController
 @RequiredArgsConstructor
+@Validated
 @RequestMapping(value = "/api/v1/account")
 public class AccountStatementController {
 

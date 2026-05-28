@@ -44,11 +44,13 @@ public class AccountStatementService {
         Page<TransactionEntity> transactionPage = transactionRepository.findByAccountAndFilters(
             accountNumber, fromDateTime, toDateTime, transactionType, PageRequest.of(page, size));
 
-        BigDecimal runningBalance = calculateRunningBalanceStart(account, transactionPage.getContent(), fromDateTime);
+        BigDecimal currentBalance = account.getAvailableBalance();
         List<TransactionHistoryDto> transactions = new ArrayList<>();
 
         for (TransactionEntity entity : transactionPage.getContent()) {
-            runningBalance = runningBalance.add(entity.getAmount());
+            BigDecimal sumAfter = transactionRepository.sumAllTransactionsAfterDate(
+                accountNumber, entity.getCreatedAt());
+            BigDecimal runningBalance = currentBalance.subtract(sumAfter);
             transactions.add(mapToDto(entity, runningBalance));
         }
 
@@ -110,28 +112,6 @@ public class AccountStatementService {
             return null;
         }
         return TransactionType.valueOf(type.toUpperCase());
-    }
-
-    private BigDecimal calculateRunningBalanceStart(BankAccountEntity account,
-                                                     List<TransactionEntity> pageTransactions,
-                                                     LocalDateTime fromDateTime) {
-        BigDecimal currentBalance = account.getAvailableBalance();
-
-        List<TransactionEntity> allAfter;
-        if (fromDateTime != null) {
-            allAfter = transactionRepository.findByAccountAndDateRange(
-                account.getNumber(), fromDateTime, LocalDateTime.now());
-        } else {
-            allAfter = transactionRepository.findByAccountAndDateRange(
-                account.getNumber(), LocalDateTime.MIN, LocalDateTime.now());
-        }
-
-        BigDecimal totalAfter = BigDecimal.ZERO;
-        for (TransactionEntity tx : allAfter) {
-            totalAfter = totalAfter.add(tx.getAmount());
-        }
-
-        return currentBalance.subtract(totalAfter);
     }
 
     private BigDecimal computeOpeningBalance(String accountNumber, LocalDateTime monthStart,

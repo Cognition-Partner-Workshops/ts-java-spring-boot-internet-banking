@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -40,4 +41,10 @@ public interface TransactionRepository extends JpaRepository<TransactionEntity, 
     List<TransactionEntity> findByAccountBeforeDate(
         @Param("accountNumber") String accountNumber,
         @Param("beforeDate") LocalDateTime beforeDate);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM TransactionEntity t " +
+        "WHERE t.account.number = :accountNumber AND t.createdAt > :afterDate")
+    BigDecimal sumAllTransactionsAfterDate(
+        @Param("accountNumber") String accountNumber,
+        @Param("afterDate") LocalDateTime afterDate);
 }
