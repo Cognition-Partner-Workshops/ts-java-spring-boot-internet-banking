@@ -14,10 +14,13 @@ import com.javatodev.finance.model.entity.BankAccountEntity;
 import com.javatodev.finance.model.entity.TransactionEntity;
 import com.javatodev.finance.repository.BankAccountRepository;
 import com.javatodev.finance.repository.TransactionRepository;
+import com.javatodev.finance.model.dto.TransactionHistoryDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -182,6 +185,59 @@ class TransactionServiceTest {
         assertThrows(InsufficientFundsException.class, () -> {
             transactionService.fundTransfer(new FundTransferRequest("A1", "A2", BigDecimal.valueOf(100)));
         });
+    }
+
+    @Test
+    void getTransactionHistory_success() {
+        LocalDateTime now = LocalDateTime.now();
+        BankAccountEntity accountEntity = new BankAccountEntity();
+        accountEntity.setNumber("A1");
+
+        TransactionEntity tx1 = TransactionEntity.builder()
+            .transactionId("TXN-001")
+            .amount(BigDecimal.valueOf(100))
+            .transactionType(TransactionType.FUND_TRANSFER)
+            .referenceNumber("REF001")
+            .transactionDateTime(now)
+            .account(accountEntity)
+            .build();
+
+        TransactionEntity tx2 = TransactionEntity.builder()
+            .transactionId("TXN-002")
+            .amount(BigDecimal.valueOf(50).negate())
+            .transactionType(TransactionType.UTILITY_PAYMENT)
+            .referenceNumber("REF002")
+            .transactionDateTime(now.minusHours(1))
+            .account(accountEntity)
+            .build();
+
+        when(transactionRepository.findByAccountNumberOrderByTransactionDateTimeDesc("A1"))
+            .thenReturn(List.of(tx1, tx2));
+
+        List<TransactionHistoryDto> history = transactionService.getTransactionHistory("A1");
+
+        assertEquals(2, history.size());
+        assertEquals("TXN-001", history.get(0).getTransactionId());
+        assertEquals(BigDecimal.valueOf(100), history.get(0).getAmount());
+        assertEquals(TransactionType.FUND_TRANSFER, history.get(0).getTransactionType());
+        assertEquals("REF001", history.get(0).getReferenceNumber());
+        assertEquals(now, history.get(0).getTransactionDateTime());
+
+        assertEquals("TXN-002", history.get(1).getTransactionId());
+        assertEquals(TransactionType.UTILITY_PAYMENT, history.get(1).getTransactionType());
+
+        verify(transactionRepository).findByAccountNumberOrderByTransactionDateTimeDesc("A1");
+    }
+
+    @Test
+    void getTransactionHistory_emptyList() {
+        when(transactionRepository.findByAccountNumberOrderByTransactionDateTimeDesc("A1"))
+            .thenReturn(List.of());
+
+        List<TransactionHistoryDto> history = transactionService.getTransactionHistory("A1");
+
+        assertTrue(history.isEmpty());
+        verify(transactionRepository).findByAccountNumberOrderByTransactionDateTimeDesc("A1");
     }
 }
 

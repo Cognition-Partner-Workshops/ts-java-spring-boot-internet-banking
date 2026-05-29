@@ -7,6 +7,7 @@ import com.javatodev.finance.model.TransactionType;
 import com.javatodev.finance.model.dto.BankAccount;
 import com.javatodev.finance.model.dto.UtilityAccount;
 import com.javatodev.finance.model.dto.request.FundTransferRequest;
+import com.javatodev.finance.model.dto.TransactionHistoryDto;
 import com.javatodev.finance.model.dto.request.UtilityPaymentRequest;
 import com.javatodev.finance.model.dto.response.FundTransferResponse;
 import com.javatodev.finance.model.dto.response.UtilityPaymentResponse;
@@ -18,6 +19,8 @@ import com.javatodev.finance.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.transaction.Transactional;
@@ -67,6 +70,7 @@ public class TransactionService {
             .account(fromAccount)
             .transactionId(transactionId)
             .referenceNumber(utilityPaymentRequest.getReferenceNumber())
+            .transactionDateTime(LocalDateTime.now())
             .amount(utilityPaymentRequest.getAmount().negate()).build());
 
         return UtilityPaymentResponse.builder().message("Utility payment successfully completed")
@@ -94,6 +98,7 @@ public class TransactionService {
         transactionRepository.save(TransactionEntity.builder().transactionType(TransactionType.FUND_TRANSFER)
             .referenceNumber(toBankAccountEntity.getNumber())
             .transactionId(transactionId)
+            .transactionDateTime(LocalDateTime.now())
             .account(fromBankAccountEntity).amount(amount.negate()).build());
 
         toBankAccountEntity.setActualBalance(toBankAccountEntity.getActualBalance().add(amount));
@@ -103,10 +108,25 @@ public class TransactionService {
         transactionRepository.save(TransactionEntity.builder().transactionType(TransactionType.FUND_TRANSFER)
             .referenceNumber(toBankAccountEntity.getNumber())
             .transactionId(transactionId)
+            .transactionDateTime(LocalDateTime.now())
             .account(toBankAccountEntity).amount(amount).build());
 
         return transactionId;
 
+    }
+
+    public List<TransactionHistoryDto> getTransactionHistory(String accountNumber) {
+        List<TransactionEntity> transactions = transactionRepository
+            .findByAccountNumberOrderByTransactionDateTimeDesc(accountNumber);
+        return transactions.stream()
+            .map(entity -> TransactionHistoryDto.builder()
+                .transactionId(entity.getTransactionId())
+                .amount(entity.getAmount())
+                .transactionType(entity.getTransactionType())
+                .referenceNumber(entity.getReferenceNumber())
+                .transactionDateTime(entity.getTransactionDateTime())
+                .build())
+            .toList();
     }
 
 }
