@@ -32,6 +32,7 @@ class UserServiceTest {
     void readUser_found() {
         UserEntity entity = new UserEntity();
         entity.setIdentificationNumber("ID123");
+        entity.setAccounts(Collections.emptyList());
         when(userRepository.findByIdentificationNumber("ID123")).thenReturn(Optional.of(entity));
         User result = userService.readUser("ID123");
         assertNotNull(result);
@@ -48,6 +49,7 @@ class UserServiceTest {
     void readUsers_success() {
         UserEntity entity = new UserEntity();
         entity.setIdentificationNumber("ID123");
+        entity.setAccounts(Collections.emptyList());
         List<UserEntity> entities = Collections.singletonList(entity);
         Page<UserEntity> page = new PageImpl<>(entities);
         when(userRepository.findAll(any(Pageable.class))).thenReturn(page);
