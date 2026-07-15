@@ -5,6 +5,7 @@ import com.javatodev.finance.exception.GlobalErrorCode;
 import com.javatodev.finance.exception.InsufficientFundsException;
 import com.javatodev.finance.model.TransactionType;
 import com.javatodev.finance.model.dto.BankAccount;
+import com.javatodev.finance.model.dto.TransactionHistoryDto;
 import com.javatodev.finance.model.dto.UtilityAccount;
 import com.javatodev.finance.model.dto.request.FundTransferRequest;
 import com.javatodev.finance.model.dto.request.UtilityPaymentRequest;
@@ -15,10 +16,19 @@ import com.javatodev.finance.model.entity.TransactionEntity;
 import com.javatodev.finance.repository.BankAccountRepository;
 import com.javatodev.finance.repository.TransactionRepository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -72,6 +82,44 @@ public class TransactionService {
         return UtilityPaymentResponse.builder().message("Utility payment successfully completed")
             .transactionId(transactionId).build();
 
+    }
+
+    public Page<TransactionHistoryDto> getTransactionHistory(String accountNumber, LocalDate fromDate, LocalDate toDate,
+                                                             TransactionType transactionType, Pageable pageable) {
+
+        List<TransactionHistoryDto> filtered = transactionRepository
+            .findByAccount_NumberOrderByCreatedAtDesc(accountNumber).stream()
+            .filter(transaction -> transactionType == null || transactionType.equals(transaction.getTransactionType()))
+            .filter(transaction -> withinRange(transaction.getCreatedAt(), fromDate, toDate))
+            .map(this::toTransactionHistoryDto)
+            .collect(Collectors.toList());
+
+        int start = (int) pageable.getOffset();
+        List<TransactionHistoryDto> content = start >= filtered.size()
+            ? Collections.emptyList()
+            : filtered.subList(start, Math.min(start + pageable.getPageSize(), filtered.size()));
+
+        return new PageImpl<>(content, pageable, filtered.size());
+    }
+
+    private boolean withinRange(LocalDateTime createdAt, LocalDate fromDate, LocalDate toDate) {
+        if (fromDate != null && (createdAt == null || createdAt.isBefore(fromDate.atStartOfDay()))) {
+            return false;
+        }
+        if (toDate != null && (createdAt == null || createdAt.isAfter(toDate.atTime(LocalTime.MAX)))) {
+            return false;
+        }
+        return true;
+    }
+
+    private TransactionHistoryDto toTransactionHistoryDto(TransactionEntity transaction) {
+        return TransactionHistoryDto.builder()
+            .id(transaction.getId())
+            .amount(transaction.getAmount())
+            .transactionType(transaction.getTransactionType())
+            .referenceNumber(transaction.getReferenceNumber())
+            .createdAt(transaction.getCreatedAt())
+            .build();
     }
 
     private void validateBalance(BankAccount bankAccount, BigDecimal amount) {
