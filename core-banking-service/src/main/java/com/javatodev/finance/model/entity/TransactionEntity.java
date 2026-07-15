@@ -3,6 +3,7 @@ package com.javatodev.finance.model.entity;
 import com.javatodev.finance.model.TransactionType;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
 import lombok.Builder;
@@ -29,7 +30,9 @@ public class TransactionEntity {
 
     private String transactionId;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    private LocalDateTime timestamp;
+
+    @ManyToOne
     @JoinColumn(name = "account_id", referencedColumnName = "id")
     private BankAccountEntity account;
 
