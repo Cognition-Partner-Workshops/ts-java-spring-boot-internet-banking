@@ -3,12 +3,14 @@ package com.javatodev.finance.service;
 import com.javatodev.finance.exception.EntityNotFoundException;
 import com.javatodev.finance.exception.GlobalErrorCode;
 import com.javatodev.finance.exception.InsufficientFundsException;
+import com.javatodev.finance.exception.ValidationException;
 import com.javatodev.finance.model.TransactionType;
 import com.javatodev.finance.model.dto.BankAccount;
 import com.javatodev.finance.model.dto.UtilityAccount;
 import com.javatodev.finance.model.dto.request.FundTransferRequest;
 import com.javatodev.finance.model.dto.request.UtilityPaymentRequest;
 import com.javatodev.finance.model.dto.response.FundTransferResponse;
+import com.javatodev.finance.model.dto.response.TransactionResponse;
 import com.javatodev.finance.model.dto.response.UtilityPaymentResponse;
 import com.javatodev.finance.model.entity.BankAccountEntity;
 import com.javatodev.finance.model.entity.TransactionEntity;
@@ -18,6 +20,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -172,6 +179,91 @@ class TransactionServiceTest {
         to.setNumber("A2");
         when(bankAccountRepository.findByNumber("A1")).thenReturn(Optional.empty());
         assertThrows(EntityNotFoundException.class, () -> transactionService.internalFundTransfer(from, to, BigDecimal.valueOf(100)));
+    }
+
+    @Test
+    void getAccountTransactions_noDates_returnsAllOrderedAndMapped() {
+        BankAccount account = new BankAccount();
+        account.setNumber("A1");
+        when(accountService.readBankAccount("A1")).thenReturn(account);
+
+        TransactionEntity entity = TransactionEntity.builder()
+            .transactionId("T1")
+            .referenceNumber("REF1")
+            .transactionType(TransactionType.FUND_TRANSFER)
+            .amount(BigDecimal.valueOf(-100))
+            .createdAt(LocalDateTime.of(2026, 1, 10, 9, 0))
+            .build();
+        when(transactionRepository.findByAccount_NumberOrderByCreatedAtDesc("A1"))
+            .thenReturn(List.of(entity));
+
+        List<TransactionResponse> result = transactionService.getAccountTransactions("A1", null, null);
+
+        assertEquals(1, result.size());
+        TransactionResponse dto = result.get(0);
+        assertEquals("T1", dto.getTransactionId());
+        assertEquals("REF1", dto.getReferenceNumber());
+        assertEquals(TransactionType.FUND_TRANSFER, dto.getTransactionType());
+        assertEquals(BigDecimal.valueOf(-100), dto.getAmount());
+        assertEquals(LocalDateTime.of(2026, 1, 10, 9, 0), dto.getCreatedAt());
+        verify(transactionRepository).findByAccount_NumberOrderByCreatedAtDesc("A1");
+        verify(transactionRepository, never())
+            .findByAccount_NumberAndCreatedAtBetweenOrderByCreatedAtDesc(anyString(), any(), any());
+    }
+
+    @Test
+    void getAccountTransactions_withRange_usesInclusiveDayBounds() {
+        BankAccount account = new BankAccount();
+        account.setNumber("A1");
+        when(accountService.readBankAccount("A1")).thenReturn(account);
+        when(transactionRepository.findByAccount_NumberAndCreatedAtBetweenOrderByCreatedAtDesc(
+            anyString(), any(), any())).thenReturn(Collections.emptyList());
+
+        LocalDate from = LocalDate.of(2026, 1, 1);
+        LocalDate to = LocalDate.of(2026, 1, 31);
+        transactionService.getAccountTransactions("A1", from, to);
+
+        ArgumentCaptor<LocalDateTime> startCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+        ArgumentCaptor<LocalDateTime> endCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(transactionRepository).findByAccount_NumberAndCreatedAtBetweenOrderByCreatedAtDesc(
+            eq("A1"), startCaptor.capture(), endCaptor.capture());
+
+        //start-of-day .. end-of-day so both boundary days are inclusive (AC3)
+        assertEquals(from.atStartOfDay(), startCaptor.getValue());
+        assertEquals(to.atTime(LocalTime.MAX), endCaptor.getValue());
+    }
+
+    @Test
+    void getAccountTransactions_emptyResult_returnsEmptyList() {
+        BankAccount account = new BankAccount();
+        account.setNumber("A1");
+        when(accountService.readBankAccount("A1")).thenReturn(account);
+        when(transactionRepository.findByAccount_NumberOrderByCreatedAtDesc("A1"))
+            .thenReturn(Collections.emptyList());
+
+        List<TransactionResponse> result = transactionService.getAccountTransactions("A1", null, null);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void getAccountTransactions_unknownAccount_throwsEntityNotFound() {
+        when(accountService.readBankAccount("NOPE")).thenThrow(EntityNotFoundException.class);
+
+        assertThrows(EntityNotFoundException.class,
+            () -> transactionService.getAccountTransactions("NOPE", null, null));
+        verifyNoInteractions(transactionRepository);
+    }
+
+    @Test
+    void getAccountTransactions_partialRange_throwsValidationException() {
+        BankAccount account = new BankAccount();
+        account.setNumber("A1");
+        when(accountService.readBankAccount("A1")).thenReturn(account);
+
+        assertThrows(ValidationException.class,
+            () -> transactionService.getAccountTransactions("A1", LocalDate.of(2026, 1, 1), null));
+        verifyNoInteractions(transactionRepository);
     }
 
     @Test
