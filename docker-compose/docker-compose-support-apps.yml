@@ -43,15 +43,16 @@ services:
       javatodev_ib_network:
         ipv4_address: 172.25.0.10
 
-  mysql_core_db:
-    build: mysql
-    container_name: mysql_javatodev_app
+  postgres_core_db:
+    build: postgres
+    container_name: postgres_javatodev_app
     environment:
-      MYSQL_ROOT_PASSWORD: woVERANKliGharym
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: woVERANKliGharym
     ports:
-      - 3306:3306
+      - 5432:5432
     volumes:
-      - mysqldata:/var/lib/mysql
+      - pgdata:/var/lib/postgresql/data
     networks:
       javatodev_ib_network:
         ipv4_address: 172.25.0.9
@@ -74,7 +75,7 @@ services:
 
 volumes:
   postgres_data:
-  mysqldata:
+  pgdata:
 
 networks:
   javatodev_ib_network:
