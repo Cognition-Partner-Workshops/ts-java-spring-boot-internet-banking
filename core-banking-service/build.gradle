@@ -23,6 +23,7 @@ repositories {
 
 ext {
     set('springCloudVersion', "2023.0.0")
+    set('flyway.version', "11.20.3")
 }
 
 dependencies {
@@ -47,8 +48,8 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
-    implementation 'org.flywaydb:flyway-core:10.12.0'
-    implementation 'org.flywaydb:flyway-mysql:10.12.0'
+    implementation 'org.flywaydb:flyway-core:11.20.3'
+    implementation 'org.flywaydb:flyway-mysql:11.20.3'
     implementation 'com.mysql:mysql-connector-j:8.4.0'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
