@@ -5,6 +5,7 @@ import com.javatodev.finance.exception.GlobalErrorCode;
 import com.javatodev.finance.exception.InsufficientFundsException;
 import com.javatodev.finance.model.TransactionType;
 import com.javatodev.finance.model.dto.BankAccount;
+import com.javatodev.finance.model.dto.TransactionHistoryDto;
 import com.javatodev.finance.model.dto.UtilityAccount;
 import com.javatodev.finance.model.dto.request.FundTransferRequest;
 import com.javatodev.finance.model.dto.request.UtilityPaymentRequest;
@@ -18,6 +19,8 @@ import com.javatodev.finance.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.transaction.Transactional;
@@ -31,6 +34,25 @@ public class TransactionService {
     private final AccountService accountService;
     private final BankAccountRepository bankAccountRepository;
     private final TransactionRepository transactionRepository;
+
+    public List<TransactionHistoryDto> getTransactionHistory(String accountNumber, LocalDateTime from, LocalDateTime to, TransactionType type, int page, int size) {
+
+        return transactionRepository.findByAccount_NumberOrderByCreatedAtDesc(accountNumber).stream()
+            .filter(transaction -> from == null || !transaction.getCreatedAt().isBefore(from))
+            .filter(transaction -> to == null || !transaction.getCreatedAt().isAfter(to))
+            .filter(transaction -> type == null || transaction.getTransactionType() == type)
+            .skip((long) page * size)
+            .limit(size)
+            .map(transaction -> TransactionHistoryDto.builder()
+                .id(transaction.getId())
+                .amount(transaction.getAmount())
+                .type(transaction.getTransactionType())
+                .referenceNumber(transaction.getReferenceNumber())
+                .timestamp(transaction.getCreatedAt())
+                .build())
+            .toList();
+
+    }
 
     public FundTransferResponse fundTransfer(FundTransferRequest fundTransferRequest) {
 

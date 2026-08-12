@@ -5,6 +5,7 @@ import com.javatodev.finance.exception.GlobalErrorCode;
 import com.javatodev.finance.exception.InsufficientFundsException;
 import com.javatodev.finance.model.TransactionType;
 import com.javatodev.finance.model.dto.BankAccount;
+import com.javatodev.finance.model.dto.TransactionHistoryDto;
 import com.javatodev.finance.model.dto.UtilityAccount;
 import com.javatodev.finance.model.dto.request.FundTransferRequest;
 import com.javatodev.finance.model.dto.request.UtilityPaymentRequest;
@@ -18,6 +19,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -183,6 +187,109 @@ class TransactionServiceTest {
         assertThrows(InsufficientFundsException.class, () -> {
             transactionService.fundTransfer(new FundTransferRequest("A1", "A2", BigDecimal.valueOf(100)));
         });
+    }
+
+    private TransactionEntity transaction(long id, TransactionType type, String reference, BigDecimal amount, LocalDateTime createdAt) {
+        return TransactionEntity.builder()
+            .id(id)
+            .transactionType(type)
+            .referenceNumber(reference)
+            .transactionId("TX" + id)
+            .amount(amount)
+            .createdAt(createdAt)
+            .build();
+    }
+
+    @Test
+    void getTransactionHistory_happyPath() {
+        LocalDateTime base = LocalDateTime.of(2026, 8, 10, 12, 0);
+        when(transactionRepository.findByAccount_NumberOrderByCreatedAtDesc("A1")).thenReturn(List.of(
+            transaction(2L, TransactionType.UTILITY_PAYMENT, "REF2", BigDecimal.valueOf(-50), base.plusHours(1)),
+            transaction(1L, TransactionType.FUND_TRANSFER, "REF1", BigDecimal.valueOf(100), base)
+        ));
+
+        List<TransactionHistoryDto> history = transactionService.getTransactionHistory("A1", null, null, null, 0, 20);
+
+        assertEquals(2, history.size());
+        assertEquals(2L, history.get(0).getId());
+        assertEquals(TransactionType.UTILITY_PAYMENT, history.get(0).getType());
+        assertEquals("REF2", history.get(0).getReferenceNumber());
+        assertEquals(BigDecimal.valueOf(-50), history.get(0).getAmount());
+        assertEquals(base.plusHours(1), history.get(0).getTimestamp());
+    }
+
+    @Test
+    void getTransactionHistory_emptyResult() {
+        when(transactionRepository.findByAccount_NumberOrderByCreatedAtDesc("A1")).thenReturn(Collections.emptyList());
+
+        List<TransactionHistoryDto> history = transactionService.getTransactionHistory("A1", null, null, null, 0, 20);
+
+        assertTrue(history.isEmpty());
+    }
+
+    @Test
+    void getTransactionHistory_mostRecentFirstOrdering() {
+        LocalDateTime base = LocalDateTime.of(2026, 8, 10, 12, 0);
+        when(transactionRepository.findByAccount_NumberOrderByCreatedAtDesc("A1")).thenReturn(List.of(
+            transaction(3L, TransactionType.FUND_TRANSFER, "REF3", BigDecimal.valueOf(30), base.plusDays(2)),
+            transaction(2L, TransactionType.FUND_TRANSFER, "REF2", BigDecimal.valueOf(20), base.plusDays(1)),
+            transaction(1L, TransactionType.FUND_TRANSFER, "REF1", BigDecimal.valueOf(10), base)
+        ));
+
+        List<TransactionHistoryDto> history = transactionService.getTransactionHistory("A1", null, null, null, 0, 20);
+
+        assertEquals(List.of(3L, 2L, 1L), history.stream().map(TransactionHistoryDto::getId).toList());
+        assertTrue(history.get(0).getTimestamp().isAfter(history.get(1).getTimestamp()));
+        assertTrue(history.get(1).getTimestamp().isAfter(history.get(2).getTimestamp()));
+    }
+
+    @Test
+    void getTransactionHistory_includesBoundaryTransactions() {
+        LocalDateTime from = LocalDateTime.of(2026, 8, 1, 0, 0);
+        LocalDateTime to = LocalDateTime.of(2026, 8, 10, 23, 59, 59);
+        when(transactionRepository.findByAccount_NumberOrderByCreatedAtDesc("A1")).thenReturn(List.of(
+            transaction(4L, TransactionType.FUND_TRANSFER, "REF4", BigDecimal.valueOf(40), to.plusSeconds(1)),
+            transaction(3L, TransactionType.FUND_TRANSFER, "REF3", BigDecimal.valueOf(30), to),
+            transaction(2L, TransactionType.FUND_TRANSFER, "REF2", BigDecimal.valueOf(20), from.plusDays(3)),
+            transaction(1L, TransactionType.FUND_TRANSFER, "REF1", BigDecimal.valueOf(10), from),
+            transaction(0L, TransactionType.FUND_TRANSFER, "REF0", BigDecimal.valueOf(5), from.minusSeconds(1))
+        ));
+
+        List<TransactionHistoryDto> history = transactionService.getTransactionHistory("A1", from, to, null, 0, 20);
+
+        assertEquals(List.of(3L, 2L, 1L), history.stream().map(TransactionHistoryDto::getId).toList());
+    }
+
+    @Test
+    void getTransactionHistory_typeFilter() {
+        LocalDateTime base = LocalDateTime.of(2026, 8, 10, 12, 0);
+        when(transactionRepository.findByAccount_NumberOrderByCreatedAtDesc("A1")).thenReturn(List.of(
+            transaction(2L, TransactionType.UTILITY_PAYMENT, "REF2", BigDecimal.valueOf(-50), base.plusHours(1)),
+            transaction(1L, TransactionType.FUND_TRANSFER, "REF1", BigDecimal.valueOf(100), base)
+        ));
+
+        List<TransactionHistoryDto> history = transactionService.getTransactionHistory("A1", null, null, TransactionType.UTILITY_PAYMENT, 0, 20);
+
+        assertEquals(1, history.size());
+        assertEquals(2L, history.get(0).getId());
+    }
+
+    @Test
+    void getTransactionHistory_pagination() {
+        LocalDateTime base = LocalDateTime.of(2026, 8, 10, 12, 0);
+        when(transactionRepository.findByAccount_NumberOrderByCreatedAtDesc("A1")).thenReturn(List.of(
+            transaction(3L, TransactionType.FUND_TRANSFER, "REF3", BigDecimal.valueOf(30), base.plusDays(2)),
+            transaction(2L, TransactionType.FUND_TRANSFER, "REF2", BigDecimal.valueOf(20), base.plusDays(1)),
+            transaction(1L, TransactionType.FUND_TRANSFER, "REF1", BigDecimal.valueOf(10), base)
+        ));
+
+        List<TransactionHistoryDto> page0 = transactionService.getTransactionHistory("A1", null, null, null, 0, 2);
+        List<TransactionHistoryDto> page1 = transactionService.getTransactionHistory("A1", null, null, null, 1, 2);
+        List<TransactionHistoryDto> page2 = transactionService.getTransactionHistory("A1", null, null, null, 2, 2);
+
+        assertEquals(List.of(3L, 2L), page0.stream().map(TransactionHistoryDto::getId).toList());
+        assertEquals(List.of(1L), page1.stream().map(TransactionHistoryDto::getId).toList());
+        assertTrue(page2.isEmpty());
     }
 }
 
