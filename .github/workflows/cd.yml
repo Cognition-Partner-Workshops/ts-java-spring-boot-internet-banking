@@ -1,0 +1,171 @@
+# Continuous delivery pipeline — DEMO / MOCKED.
+#
+# Every AWS identifier below is a placeholder. Nothing in this workflow can
+# touch real infrastructure unless BOTH of the following are true:
+#   * the repository variable ENABLE_REAL_DEPLOY is set to 'true', and
+#   * the run is dispatched with dry_run = false.
+# Otherwise every AWS/kubectl call is printed instead of executed.
+name: CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [staging, production]
+        default: staging
+      dry_run:
+        description: Print AWS/kubectl commands instead of running them
+        type: boolean
+        default: true
+      image_tag:
+        description: Image tag to build and deploy (defaults to the commit SHA)
+        type: string
+        default: ''
+
+concurrency:
+  group: cd-${{ github.workflow }}-${{ inputs.environment }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # --- MOCKED PLACEHOLDERS (demo only) -------------------------------------
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: '123456789012'
+  ECR_REGISTRY: 123456789012.dkr.ecr.us-east-1.amazonaws.com
+  EKS_CLUSTER: demo-eks-cluster
+  AWS_OIDC_ROLE_ARN: arn:aws:iam::123456789012:role/demo-github-actions-deploy
+  # -------------------------------------------------------------------------
+
+jobs:
+  build-images:
+    name: Build image ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write # required for AWS OIDC federation
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - core-banking-service
+          - internet-banking-api-gateway
+          - internet-banking-config-server
+          - internet-banking-fund-transfer-service
+          - internet-banking-service-registry
+          - internet-banking-user-service
+          - internet-banking-utility-payment-service
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve image tag
+        id: meta
+        run: echo "image_tag=${{ inputs.image_tag || github.sha }}" >> "${GITHUB_OUTPUT}"
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+
+      # The service Dockerfiles ADD build/libs/<service>-0.0.1-SNAPSHOT.jar, so
+      # the jar has to exist before `docker build`.
+      - name: Build boot jar
+        working-directory: ${{ matrix.service }}
+        run: ./gradlew bootJar -x test --no-daemon
+
+      - name: Build image
+        working-directory: ${{ matrix.service }}
+        run: |
+          docker build -t "${ECR_REGISTRY}/${{ matrix.service }}:${{ steps.meta.outputs.image_tag }}" .
+
+      # MOCKED: no credentials are configured in the demo, so the login and the
+      # push are printed. Flip the guard to exercise the real path.
+      - name: Configure AWS credentials (OIDC)
+        if: vars.ENABLE_REAL_DEPLOY == 'true' && inputs.dry_run == false
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        if: vars.ENABLE_REAL_DEPLOY == 'true' && inputs.dry_run == false
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Push image to Amazon ECR
+        env:
+          IMAGE: ${{ env.ECR_REGISTRY }}/${{ matrix.service }}:${{ steps.meta.outputs.image_tag }}
+        run: |
+          set -euo pipefail
+          if [ "${{ vars.ENABLE_REAL_DEPLOY }}" = "true" ] && [ "${{ inputs.dry_run }}" != "true" ]; then
+            docker push "${IMAGE}"
+          else
+            echo "DRY RUN — would run: docker push ${IMAGE}"
+            echo "- \`docker push ${IMAGE}\` (mocked)" >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+  deploy-staging:
+    name: Deploy to staging
+    needs: build-images
+    if: inputs.environment == 'staging' || inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      K8S_NAMESPACE: demo-banking-staging # MOCKED
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        if: vars.ENABLE_REAL_DEPLOY == 'true' && inputs.dry_run == false
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy manifests
+        env:
+          IMAGE_TAG: ${{ needs.build-images.outputs.image_tag }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          ENABLE_REAL_DEPLOY: ${{ vars.ENABLE_REAL_DEPLOY }}
+        run: .github/deploy/deploy.sh
+
+  deploy-production:
+    name: Deploy to production
+    needs: [build-images, deploy-staging]
+    # The `production` GitHub environment carries the required-reviewers rule,
+    # so this job waits for a manual approval before it starts.
+    if: inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      K8S_NAMESPACE: demo-banking-prod # MOCKED
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        if: vars.ENABLE_REAL_DEPLOY == 'true' && inputs.dry_run == false
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy manifests
+        env:
+          IMAGE_TAG: ${{ needs.build-images.outputs.image_tag }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          ENABLE_REAL_DEPLOY: ${{ vars.ENABLE_REAL_DEPLOY }}
+        run: .github/deploy/deploy.sh

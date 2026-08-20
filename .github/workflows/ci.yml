@@ -1,0 +1,235 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  JAVA_VERSION: '21'
+  JAVA_DISTRIBUTION: temurin
+
+jobs:
+  changes:
+    name: Detect changed services
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.matrix.outputs.services }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            core-banking-service:
+              - 'core-banking-service/**'
+            internet-banking-api-gateway:
+              - 'internet-banking-api-gateway/**'
+            internet-banking-config-server:
+              - 'internet-banking-config-server/**'
+            internet-banking-fund-transfer-service:
+              - 'internet-banking-fund-transfer-service/**'
+            internet-banking-service-registry:
+              - 'internet-banking-service-registry/**'
+            internet-banking-user-service:
+              - 'internet-banking-user-service/**'
+            internet-banking-utility-payment-service:
+              - 'internet-banking-utility-payment-service/**'
+            infra:
+              - 'docker-compose/**'
+              - '.github/workflows/**'
+
+      # On PRs only the changed services build. Everywhere else (push, manual
+      # run, or a change to CI/compose itself) the full matrix runs.
+      - name: Build service matrix
+        id: matrix
+        env:
+          ALL_SERVICES: >-
+            ["core-banking-service","internet-banking-api-gateway","internet-banking-config-server",
+            "internet-banking-fund-transfer-service","internet-banking-service-registry",
+            "internet-banking-user-service","internet-banking-utility-payment-service"]
+          CHANGED: ${{ steps.filter.outputs.changes }}
+          INFRA: ${{ steps.filter.outputs.infra }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" != "pull_request" ] || [ "${INFRA}" = "true" ]; then
+            services=$(echo "${ALL_SERVICES}" | jq -c .)
+          else
+            services=$(echo "${CHANGED}" | jq -c '[.[] | select(. != "infra")]')
+          fi
+          echo "services=${services}" >> "${GITHUB_OUTPUT}"
+          echo "Building: ${services}" >> "${GITHUB_STEP_SUMMARY}"
+
+  build:
+    name: Build ${{ matrix.service }}
+    needs: changes
+    if: needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: gradle
+
+      # Each service carries its own Gradle wrapper (8.6); there is no root build.
+      # `build` compiles, runs the JUnit 5 suites and produces the boot jar.
+      # Tests run against in-memory H2, so no database service container is needed.
+      - name: Build and test
+        run: ./gradlew build --no-daemon --stacktrace
+
+      - name: Coverage report
+        run: ./gradlew jacocoTestReport --no-daemon
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.service }}
+          path: |
+            ${{ matrix.service }}/build/test-results/test/**/*.xml
+            ${{ matrix.service }}/build/reports/tests/test/**
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload JaCoCo coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.service }}
+          path: ${{ matrix.service }}/build/reports/jacoco/test/**
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Test summary
+        if: always()
+        run: |
+          set -euo pipefail
+          echo "### ${{ matrix.service }}" >> "${GITHUB_STEP_SUMMARY}"
+          if ls build/test-results/test/*.xml >/dev/null 2>&1; then
+            grep -ho 'tests="[0-9]*" skipped="[0-9]*" failures="[0-9]*" errors="[0-9]*"' \
+              build/test-results/test/*.xml \
+              | tr -dc '0-9 \n' \
+              | awk '{t+=$1; s+=$2; f+=$3+$4} END {printf "- %d tests, %d failed, %d skipped\n", t, f, s}' \
+              >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "- no test results produced" >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+  compose-validate:
+    name: Validate docker compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: docker compose config
+        working-directory: docker-compose
+        run: |
+          docker compose -f docker-compose.yml config --quiet
+          docker compose -f docker-compose-support-apps.yml config --quiet
+
+  dockerfile-lint:
+    name: Hadolint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Dockerfiles
+        run: |
+          set -euo pipefail
+          status=0
+          while IFS= read -r file; do
+            echo "::group::${file}"
+            docker run --rm -i hadolint/hadolint:2.12.0 hadolint \
+              --failure-threshold error - < "${file}" || status=1
+            echo "::endgroup::"
+          done < <(find . -name Dockerfile -not -path './.git/*' | sort)
+          exit "${status}"
+
+  workflow-lint:
+    name: Lint workflows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: actionlint
+        run: |
+          docker run --rm -v "${PWD}:/repo" --workdir /repo \
+            rhysd/actionlint:1.7.1 -color
+
+  dependency-scan:
+    name: Dependency vulnerability scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Trivy runs from its official image (same pattern as hadolint/actionlint)
+      # and reads the Gradle build files directly, so no resolved lockfiles are
+      # required. Findings are reported, not enforced, in the demo.
+      - name: Trivy filesystem scan
+        run: |
+          set -euo pipefail
+          docker run --rm -v "${PWD}:/repo" --workdir /repo \
+            aquasec/trivy:0.56.2 fs \
+            --scanners vuln,secret,misconfig \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --no-progress \
+            --format sarif --output trivy-results.sarif .
+          docker run --rm -v "${PWD}:/repo" --workdir /repo \
+            aquasec/trivy:0.56.2 fs \
+            --scanners vuln,secret,misconfig \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --no-progress . | tee -a "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload SARIF artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-results
+          path: trivy-results.sarif
+          if-no-files-found: warn
+          retention-days: 7
+
+  ci-status:
+    name: ci-status
+    runs-on: ubuntu-latest
+    needs: [changes, build, compose-validate, dockerfile-lint, workflow-lint, dependency-scan]
+    if: always()
+    steps:
+      # Aggregate gate: this is the single required check for branch protection.
+      # A skipped `build` (no service changed on a PR) is a pass; a failure or
+      # cancellation anywhere is not.
+      - name: Report aggregate result
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "${RESULTS}" | jq -r 'to_entries[] | "- \(.key): \(.value.result)"' >> "${GITHUB_STEP_SUMMARY}"
+          if echo "${RESULTS}" | jq -e 'to_entries | any(.value.result == "failure" or .value.result == "cancelled")' >/dev/null; then
+            echo "One or more CI jobs failed."
+            exit 1
+          fi
+          echo "All CI jobs passed."

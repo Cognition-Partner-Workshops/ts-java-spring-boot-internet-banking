@@ -124,6 +124,13 @@ Article series
 
 [11. Microservices – Centralized Configurations With Spring Cloud Config](https://javatodev.com/microservices-centralized-configurations-with-spring-cloud-config/)
 
+### CI/CD
+
+GitHub Actions workflows build and test every service on push/PR and provide a
+mocked AWS (ECR + EKS) delivery pipeline. Service matrix, jobs, mocked
+placeholders and the GitHub environments/variables they expect are documented in
+[.github/README.md](.github/README.md).
+
 #### Author
 
 <h1 align="center">Hi 👋, I'm Chinthaka Dinadasa</h1>

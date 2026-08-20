@@ -1,0 +1,54 @@
+version: 2
+updates:
+  # Each service has its own Gradle build (there is no aggregate root build),
+  # so one ecosystem entry per service directory.
+  - package-ecosystem: gradle
+    directories:
+      - /core-banking-service
+      - /internet-banking-api-gateway
+      - /internet-banking-config-server
+      - /internet-banking-fund-transfer-service
+      - /internet-banking-service-registry
+      - /internet-banking-user-service
+      - /internet-banking-utility-payment-service
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels: [dependencies, java]
+    groups:
+      spring:
+        patterns:
+          - org.springframework*
+          - io.spring*
+      test:
+        patterns:
+          - org.junit*
+          - com.h2database*
+          - org.mockito*
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, ci]
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: docker
+    directories:
+      - /core-banking-service
+      - /internet-banking-api-gateway
+      - /internet-banking-config-server
+      - /internet-banking-fund-transfer-service
+      - /internet-banking-service-registry
+      - /internet-banking-user-service
+      - /internet-banking-utility-payment-service
+      - /docker-compose/keycloak
+      - /docker-compose/mysql
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, docker]
