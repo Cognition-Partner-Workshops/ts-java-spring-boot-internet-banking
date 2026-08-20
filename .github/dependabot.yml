@@ -1,0 +1,180 @@
+version: 2
+
+updates:
+  # --- GitHub Actions used by the CI/CD workflows -------------------------
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci(actions)"
+    labels: [dependencies, github-actions]
+
+  # --- Gradle: one entry per service module (no aggregate root build) -----
+  - package-ecosystem: gradle
+    directory: /core-banking-service
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(core-banking-service)"
+    labels: [dependencies, java]
+    groups:
+      spring:
+        patterns: ["org.springframework*", "io.spring*"]
+
+  - package-ecosystem: gradle
+    directory: /internet-banking-api-gateway
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(api-gateway)"
+    labels: [dependencies, java]
+    groups:
+      spring:
+        patterns: ["org.springframework*", "io.spring*"]
+
+  - package-ecosystem: gradle
+    directory: /internet-banking-config-server
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(config-server)"
+    labels: [dependencies, java]
+    groups:
+      spring:
+        patterns: ["org.springframework*", "io.spring*"]
+
+  - package-ecosystem: gradle
+    directory: /internet-banking-fund-transfer-service
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(fund-transfer-service)"
+    labels: [dependencies, java]
+    groups:
+      spring:
+        patterns: ["org.springframework*", "io.spring*"]
+
+  - package-ecosystem: gradle
+    directory: /internet-banking-service-registry
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(service-registry)"
+    labels: [dependencies, java]
+    groups:
+      spring:
+        patterns: ["org.springframework*", "io.spring*"]
+
+  - package-ecosystem: gradle
+    directory: /internet-banking-user-service
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(user-service)"
+    labels: [dependencies, java]
+    groups:
+      spring:
+        patterns: ["org.springframework*", "io.spring*"]
+
+  - package-ecosystem: gradle
+    directory: /internet-banking-utility-payment-service
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build(utility-payment-service)"
+    labels: [dependencies, java]
+    groups:
+      spring:
+        patterns: ["org.springframework*", "io.spring*"]
+
+  # --- Docker: service base images ---------------------------------------
+  - package-ecosystem: docker
+    directory: /core-banking-service
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "build(docker)"
+    labels: [dependencies, docker]
+
+  - package-ecosystem: docker
+    directory: /internet-banking-api-gateway
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "build(docker)"
+    labels: [dependencies, docker]
+
+  - package-ecosystem: docker
+    directory: /internet-banking-config-server
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "build(docker)"
+    labels: [dependencies, docker]
+
+  - package-ecosystem: docker
+    directory: /internet-banking-fund-transfer-service
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "build(docker)"
+    labels: [dependencies, docker]
+
+  - package-ecosystem: docker
+    directory: /internet-banking-service-registry
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "build(docker)"
+    labels: [dependencies, docker]
+
+  - package-ecosystem: docker
+    directory: /internet-banking-user-service
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "build(docker)"
+    labels: [dependencies, docker]
+
+  - package-ecosystem: docker
+    directory: /internet-banking-utility-payment-service
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "build(docker)"
+    labels: [dependencies, docker]
+
+  # --- Locally built images used by docker-compose ------------------------
+  - package-ecosystem: docker
+    directory: /docker-compose/keycloak
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "build(docker)"
+    labels: [dependencies, docker]
+
+  - package-ecosystem: docker
+    directory: /docker-compose/mysql
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "build(docker)"
+    labels: [dependencies, docker]
+
+  # --- Docker Compose infra images (Keycloak, Postgres, Zipkin) -----------
+  - package-ecosystem: docker-compose
+    directory: /docker-compose
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "build(compose)"
+    labels: [dependencies, docker]
