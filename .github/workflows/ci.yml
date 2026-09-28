@@ -70,6 +70,16 @@ jobs:
             ${{ matrix.service }}/*.gradle*
             ${{ matrix.service }}/gradle/wrapper/gradle-wrapper.properties
 
+      # Retries the wrapper's Gradle distribution download, which can hit transient HTTP 5xx errors.
+      - name: Install Gradle wrapper distribution
+        run: |
+          for attempt in 1 2 3; do
+            ./gradlew --version && exit 0
+            echo "::warning::Gradle wrapper download failed (attempt ${attempt}); retrying"
+            sleep $((attempt * 10))
+          done
+          exit 1
+
       - name: Build (compile + bootJar)
         run: ./gradlew assemble testClasses
 
@@ -132,7 +142,7 @@ jobs:
         run: |
           for service in */; do
             if [ -f "${service}gradlew" ]; then
-              (cd "$service" && ./gradlew testClasses)
+              (cd "$service" && { ./gradlew --version || { sleep 10; ./gradlew --version; }; } && ./gradlew testClasses)
             fi
           done
 
