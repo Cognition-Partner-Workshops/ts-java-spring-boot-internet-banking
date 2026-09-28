@@ -1,0 +1,181 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  JAVA_VERSION: "21"
+  JAVA_DISTRIBUTION: temurin
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+jobs:
+  lint:
+    name: Lint (wrapper, workflows, compose)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      # Verifies every gradle-wrapper.jar in the repo against Gradle's published checksums.
+      - name: Validate Gradle wrappers
+        uses: gradle/actions/wrapper-validation@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Lint GitHub Actions workflows (actionlint)
+        run: docker run --rm -v "${GITHUB_WORKSPACE}:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+
+      - name: Validate docker-compose files
+        working-directory: docker-compose
+        run: |
+          docker compose -f docker-compose.yml config --quiet
+          docker compose -f docker-compose-support-apps.yml config --quiet
+
+  build-test:
+    name: Build & test (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - core-banking-service
+          - internet-banking-api-gateway
+          - internet-banking-config-server
+          - internet-banking-fund-transfer-service
+          - internet-banking-service-registry
+          - internet-banking-user-service
+          - internet-banking-utility-payment-service
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v6
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+          cache-dependency-path: |
+            ${{ matrix.service }}/*.gradle*
+            ${{ matrix.service }}/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Build (compile + bootJar)
+        run: ./gradlew assemble testClasses
+
+      - name: Static checks (gradle check, excluding tests)
+        run: ./gradlew check -x test
+
+      - name: Unit tests
+        run: ./gradlew test
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports-${{ matrix.service }}
+          path: |
+            ${{ matrix.service }}/build/test-results/test/*.xml
+            ${{ matrix.service }}/build/reports/tests/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload boot jar
+        uses: actions/upload-artifact@v7
+        with:
+          name: jar-${{ matrix.service }}
+          path: ${{ matrix.service }}/build/libs/${{ matrix.service }}-*-SNAPSHOT.jar
+          if-no-files-found: error
+          retention-days: 7
+
+  sonarqube:
+    name: SonarQube scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build-test
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL || secrets.SONAR_HOST_URL }}
+    steps:
+      - name: Skip notice
+        if: env.SONAR_TOKEN == ''
+        run: echo "::notice title=SonarQube skipped::SONAR_TOKEN secret is not configured; skipping SonarQube scan."
+
+      - uses: actions/checkout@v7
+        if: env.SONAR_TOKEN != ''
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        if: env.SONAR_TOKEN != ''
+        uses: actions/setup-java@v6
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+          cache-dependency-path: |
+            */*.gradle*
+            */gradle/wrapper/gradle-wrapper.properties
+
+      - name: Compile all services
+        if: env.SONAR_TOKEN != ''
+        run: |
+          for service in */; do
+            if [ -f "${service}gradlew" ]; then
+              (cd "$service" && ./gradlew testClasses)
+            fi
+          done
+
+      - name: SonarQube scan
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v8
+        with:
+          args: >
+            -Dsonar.projectKey=ts-java-spring-boot-internet-banking
+            -Dsonar.projectName=ts-java-spring-boot-internet-banking
+            -Dsonar.modules=core-banking-service,internet-banking-api-gateway,internet-banking-config-server,internet-banking-fund-transfer-service,internet-banking-service-registry,internet-banking-user-service,internet-banking-utility-payment-service
+            -Dsonar.sources=src/main/java
+            -Dsonar.tests=src/test/java
+            -Dsonar.java.binaries=build/classes/java/main
+            -Dsonar.java.test.binaries=build/classes/java/test
+            -Dsonar.java.source=21
+
+  docker-images:
+    name: Docker image (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [lint, build-test]
+    if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - core-banking-service
+          - internet-banking-api-gateway
+          - internet-banking-config-server
+          - internet-banking-fund-transfer-service
+          - internet-banking-service-registry
+          - internet-banking-user-service
+          - internet-banking-utility-payment-service
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download boot jar
+        uses: actions/download-artifact@v8
+        with:
+          name: jar-${{ matrix.service }}
+          path: ${{ matrix.service }}/build/libs
+
+      - name: Build Docker image (no push)
+        working-directory: ${{ matrix.service }}
+        run: docker build --tag "javatodev/${{ matrix.service }}:${{ github.sha }}" --tag "javatodev/${{ matrix.service }}:latest" .
