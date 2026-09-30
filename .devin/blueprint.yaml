@@ -1,0 +1,72 @@
+# https://docs.devin.ai/onboard-devin/environment-yaml
+# Spring Cloud microservices internet-banking platform (Java 21, Spring Boot 3.2.4).
+# Build runs with Gradle wrapper (8.6); runtime is fully containerized via docker-compose.
+
+# One-time setup (e.g., install system tools, global CLIs).
+initialize: |
+  if [ ! -d /usr/lib/jvm/jdk-21.0.2+13 ]; then
+    curl -fsSL https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.2%2B13/OpenJDK21U-jdk_x64_linux_hotspot_21.0.2_13.tar.gz -o /tmp/jdk21.tar.gz
+    sudo mkdir -p /usr/lib/jvm
+    sudo tar -xzf /tmp/jdk21.tar.gz -C /usr/lib/jvm
+  fi
+  echo 'export JAVA_HOME=/usr/lib/jvm/jdk-21.0.2+13' >> $HOME/.bashrc
+  echo 'export PATH=$JAVA_HOME/bin:$PATH' >> $HOME/.bashrc
+
+# Every build: compile all 7 service jars with Java 21 and build local docker images
+# Install project dependencies (runs during builds, surfaced to agent at session start).
+maintenance: |
+  export JAVA_HOME=/usr/lib/jvm/jdk-21.0.2+13
+  export PATH=$JAVA_HOME/bin:$PATH
+  cd $HOME/repos/ts-java-spring-boot-internet-banking
+  # Maven Central / plugins.gradle.org return HTTP 429 when many blueprints build
+  # concurrently during a snapshot build, so retry each build with backoff.
+  export GRADLE_OPTS="-Dorg.gradle.internal.http.connectionTimeout=120000 -Dorg.gradle.internal.http.socketTimeout=120000 -Dorg.gradle.internal.repository.max.retries=5 -Dorg.gradle.internal.repository.initial.backoff=2000"
+  retry() {
+    local n=1 max=5 delay=15
+    until "$@"; do
+      if [ $n -ge $max ]; then
+        echo "FAILED after $max attempts: $*" >&2
+        return 1
+      fi
+      echo "Attempt $n failed (likely upstream 429/network); retrying in ${delay}s: $*" >&2
+      sleep $delay
+      delay=$((delay * 2))
+      n=$((n + 1))
+    done
+  }
+  for d in internet-banking-config-server internet-banking-service-registry internet-banking-api-gateway internet-banking-user-service internet-banking-fund-transfer-service internet-banking-utility-payment-service core-banking-service; do
+    chmod +x "$d/gradlew"
+    retry bash -c "cd '$d' && ./gradlew bootJar -x test --no-daemon --max-workers=2"
+    retry bash -c "cd '$d' && docker build -t 'javatodev/$d' ."
+  done
+
+knowledge:
+  - name: java-version
+    contents: |
+      Requires JDK 21 (Temurin 21.0.2 installed at /usr/lib/jvm/jdk-21.0.2+13).
+      Always `export JAVA_HOME=/usr/lib/jvm/jdk-21.0.2+13 && export PATH=$JAVA_HOME/bin:$PATH`
+      before running Gradle; the box's default `java` is JDK 17 which will fail the build.
+  - name: build
+    contents: |
+      Per-service: `cd <service-dir> && ./gradlew bootJar -x test --no-daemon`.
+      Each service has its own Gradle wrapper (8.6); there is no aggregate root build.
+  - name: run
+    contents: |
+      Full stack is containerized. After `maintenance` builds the javatodev/* images:
+        cd docker-compose && docker compose up -d
+      Brings up: zipkin(9411), keycloak(8080)+postgres, mysql(3306), config-server(8090),
+      eureka registry(8081), api-gateway(8082), user(8083), fund-transfer(8084),
+      utility-payment(8085), core-banking(8092). App containers self-order via wait-for-it.sh.
+      Config is pulled at runtime from the public github config repo by the config-server.
+  - name: verify
+    contents: |
+      Eureka UI: http://localhost:8081 (5 app services should be UP).
+      Health: curl http://localhost:8090/actuator/health (and ports 8081-8085, 8092).
+      Auth smoke test (Keycloak password grant -> gateway):
+        TOKEN=$(curl -s -X POST http://localhost:8080/realms/javatodev-internet-banking/protocol/openid-connect/token \
+          -d grant_type=password -d client_id=javatodev-internet-banking-api-client \
+          -d client_secret=nVKeKJcoPbixsy2mxh9Yiy9azzGlA1V0 \
+          -d username=ib_admin@javatodev.com -d password=5V7huE3G86uB | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
+        curl -H "Authorization: Bearer $TOKEN" http://localhost:8082/banking-core/api/v1/user
+      Note: the postman env's client_id (internet-banking-core-client) is stale; use
+      javatodev-internet-banking-api-client from the keycloak realm-export instead.
