@@ -2,35 +2,39 @@ package com.javatodev.finance.model.entity;
 
 import com.javatodev.finance.model.TransactionType;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.FieldType;
+
 import java.math.BigDecimal;
 
-import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Builder
 @Getter
 @Setter
-@Entity
-@Table(name = "banking_core_transaction")
+@NoArgsConstructor
+@AllArgsConstructor
+@Document(collection = "bankingCoreTransaction")
 public class TransactionEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Field(targetType = FieldType.DECIMAL128)
     private BigDecimal amount;
 
-    @Enumerated(EnumType.STRING)
     private TransactionType transactionType;
 
     private String referenceNumber;
 
     private String transactionId;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "account_id", referencedColumnName = "id")
-    private BankAccountEntity account;
+    private Long accountId;
 
 }

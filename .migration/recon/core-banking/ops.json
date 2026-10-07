@@ -1,0 +1,177 @@
+[
+  {
+    "name": "collation_casefold_account_number",
+    "collection": "bankingCoreAccount",
+    "rules": [
+      "collation_casefold"
+    ],
+    "source_sql": "SELECT id, number FROM banking_core_account",
+    "target_pipeline": [
+      {
+        "$project": {
+          "_id": 0,
+          "id": "$_id",
+          "number": 1
+        }
+      }
+    ]
+  },
+  {
+    "name": "collation_casefold_user_identification_number",
+    "collection": "bankingCoreUser",
+    "rules": [
+      "collation_casefold"
+    ],
+    "source_sql": "SELECT id, identification_number AS identificationNumber FROM banking_core_user",
+    "target_pipeline": [
+      {
+        "$project": {
+          "_id": 0,
+          "id": "$_id",
+          "identificationNumber": 1
+        }
+      }
+    ]
+  },
+  {
+    "name": "collation_casefold_utility_provider_name",
+    "collection": "bankingCoreUtilityAccount",
+    "rules": [
+      "collation_casefold"
+    ],
+    "source_sql": "SELECT id, provider_name AS providerName FROM banking_core_utility_account",
+    "target_pipeline": [
+      {
+        "$project": {
+          "_id": 0,
+          "id": "$_id",
+          "providerName": 1
+        }
+      }
+    ]
+  },
+  {
+    "name": "GET /api/v1/account/bank-account/{number} (BankAccountRepository.findByNumber)",
+    "collection": "bankingCoreAccount",
+    "rules": [
+      "decimal_round",
+      "collation_casefold"
+    ],
+    "source_sql": "SELECT id, number, type, status, actual_balance AS actualBalance, available_balance AS availableBalance, user_id AS userId FROM banking_core_account WHERE number = '100015003000'",
+    "target_pipeline": [
+      {
+        "$match": {
+          "$expr": {
+            "$eq": [
+              {
+                "$toLower": "$number"
+              },
+              "100015003000"
+            ]
+          }
+        }
+      },
+      {
+        "$project": {
+          "_id": 0,
+          "id": "$_id",
+          "number": 1,
+          "type": 1,
+          "status": 1,
+          "actualBalance": 1,
+          "availableBalance": 1,
+          "userId": 1
+        }
+      }
+    ]
+  },
+  {
+    "name": "GET /api/v1/user/{identification} (UserRepository.findByIdentificationNumber)",
+    "collection": "bankingCoreUser",
+    "rules": [
+      "collation_casefold"
+    ],
+    "source_sql": "SELECT id, first_name AS firstName, last_name AS lastName, email, identification_number AS identificationNumber FROM banking_core_user WHERE identification_number = '808829932v'",
+    "target_pipeline": [
+      {
+        "$match": {
+          "$expr": {
+            "$eq": [
+              {
+                "$toLower": "$identificationNumber"
+              },
+              "808829932v"
+            ]
+          }
+        }
+      },
+      {
+        "$project": {
+          "_id": 0,
+          "id": "$_id",
+          "firstName": 1,
+          "lastName": 1,
+          "email": 1,
+          "identificationNumber": 1
+        }
+      }
+    ]
+  },
+  {
+    "name": "User.bankAccounts (BankAccountRepository.findByUserId)",
+    "collection": "bankingCoreAccount",
+    "rules": [
+      "decimal_round"
+    ],
+    "source_sql": "SELECT id, number, type, status, actual_balance AS actualBalance, available_balance AS availableBalance, user_id AS userId FROM banking_core_account WHERE user_id = 1",
+    "target_pipeline": [
+      {
+        "$match": {
+          "userId": 1
+        }
+      },
+      {
+        "$project": {
+          "_id": 0,
+          "id": "$_id",
+          "number": 1,
+          "type": 1,
+          "status": 1,
+          "actualBalance": 1,
+          "availableBalance": 1,
+          "userId": 1
+        }
+      }
+    ]
+  },
+  {
+    "name": "GET /api/v1/account/util-account/{name} (UtilityAccountRepository.findByProviderName)",
+    "collection": "bankingCoreUtilityAccount",
+    "rules": [
+      "collation_casefold"
+    ],
+    "source_sql": "SELECT id, number, provider_name AS providerName FROM banking_core_utility_account WHERE provider_name = 'vodafone'",
+    "target_pipeline": [
+      {
+        "$match": {
+          "$expr": {
+            "$eq": [
+              {
+                "$toLower": "$providerName"
+              },
+              "vodafone"
+            ]
+          }
+        }
+      },
+      {
+        "$project": {
+          "_id": 0,
+          "id": "$_id",
+          "number": 1,
+          "providerName": 1
+        }
+      }
+    ]
+  }
+]

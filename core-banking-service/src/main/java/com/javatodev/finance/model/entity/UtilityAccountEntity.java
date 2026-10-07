@@ -1,22 +1,17 @@
 package com.javatodev.finance.model.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
 import lombok.Getter;
 import lombok.Setter;
 
-
 @Getter
 @Setter
-@Entity
-@Table(name = "banking_core_utility_account")
+@Document(collection = "bankingCoreUtilityAccount")
 public class UtilityAccountEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String number;

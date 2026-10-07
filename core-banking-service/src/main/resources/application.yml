@@ -1,3 +1,11 @@
 spring:
   application:
     name: core-banking-service
+  data:
+    mongodb:
+      # Atlas URI of the scoped principal (readWrite on one database only). Supplied at runtime
+      # as an environment/property override; never committed. The config server (external repo
+      # internet-banking-microservices-configurations, file core-banking-service*.yml) may set
+      # spring.data.mongodb.uri instead and must drop its spring.datasource / spring.jpa /
+      # spring.flyway entries for this service.
+      uri: ${MMP_RT_B1_TARGET_URI}

@@ -2,7 +2,11 @@ package com.javatodev.finance.repository;
 
 import com.javatodev.finance.model.entity.TransactionEntity;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.mongodb.repository.MongoRepository;
 
-public interface TransactionRepository extends JpaRepository<TransactionEntity, Long> {
+import java.util.Optional;
+
+public interface TransactionRepository extends MongoRepository<TransactionEntity, Long> {
+
+    Optional<TransactionEntity> findFirstByOrderByIdDesc();
 }

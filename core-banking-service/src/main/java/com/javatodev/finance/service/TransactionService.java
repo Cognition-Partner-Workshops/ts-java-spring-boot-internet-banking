@@ -16,13 +16,18 @@ import com.javatodev.finance.repository.BankAccountRepository;
 import com.javatodev.finance.repository.TransactionRepository;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Every public method runs in one MongoDB multi-document transaction (MongoTransactionManager):
+ * fund transfer = 2 account updates + 2 transaction documents sharing one transactionId,
+ * utility payment = 1 account update + 1 transaction document, all-or-nothing as under JPA.
+ */
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -62,9 +67,11 @@ public class TransactionService {
 
         fromAccount.setActualBalance(fromAccount.getActualBalance().subtract(utilityPaymentRequest.getAmount()));
         fromAccount.setAvailableBalance(fromAccount.getActualBalance().subtract(utilityPaymentRequest.getAmount()));
+        bankAccountRepository.save(fromAccount);
 
         transactionRepository.save(TransactionEntity.builder().transactionType(TransactionType.UTILITY_PAYMENT)
-            .account(fromAccount)
+            .id(nextTransactionId())
+            .accountId(fromAccount.getId())
             .transactionId(transactionId)
             .referenceNumber(utilityPaymentRequest.getReferenceNumber())
             .amount(utilityPaymentRequest.getAmount().negate()).build());
@@ -91,22 +98,33 @@ public class TransactionService {
         fromBankAccountEntity.setAvailableBalance(fromBankAccountEntity.getActualBalance().subtract(amount));
         bankAccountRepository.save(fromBankAccountEntity);
 
+        Long debitId = nextTransactionId();
         transactionRepository.save(TransactionEntity.builder().transactionType(TransactionType.FUND_TRANSFER)
+            .id(debitId)
             .referenceNumber(toBankAccountEntity.getNumber())
             .transactionId(transactionId)
-            .account(fromBankAccountEntity).amount(amount.negate()).build());
+            .accountId(fromBankAccountEntity.getId()).amount(amount.negate()).build());
 
         toBankAccountEntity.setActualBalance(toBankAccountEntity.getActualBalance().add(amount));
         toBankAccountEntity.setAvailableBalance(toBankAccountEntity.getActualBalance().add(amount));
         bankAccountRepository.save(toBankAccountEntity);
 
         transactionRepository.save(TransactionEntity.builder().transactionType(TransactionType.FUND_TRANSFER)
+            .id(debitId + 1)
             .referenceNumber(toBankAccountEntity.getNumber())
             .transactionId(transactionId)
-            .account(toBankAccountEntity).amount(amount).build());
+            .accountId(toBankAccountEntity.getId()).amount(amount).build());
 
         return transactionId;
 
+    }
+
+    // The legacy AUTO_INCREMENT id is kept as the numeric _id (mapping spec key_strategy); without
+    // a counters collection (not a write target of this batch) the next id is max(_id)+1 read
+    // inside the same transaction. A concurrent writer hits the unique _id and the transaction
+    // aborts (surfaces as the existing 400 error shape) instead of corrupting a balance.
+    private Long nextTransactionId() {
+        return transactionRepository.findFirstByOrderByIdDesc().map(TransactionEntity::getId).orElse(0L) + 1;
     }
 
 }
