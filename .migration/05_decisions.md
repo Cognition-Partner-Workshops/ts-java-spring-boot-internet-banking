@@ -177,3 +177,50 @@ what was done, evidence. Nothing here authorizes a write: write scope is `.migra
 - Observed: this worker VM had neither (`mysql: command not found`; only `mongo:7` pulled) — the snapshot has not been
   rebuilt since the merge. Installed/pulled by hand with the blueprint's own commands; nothing to change in the blueprint.
 - Evidence: `mysql  Ver 8.0.46-0ubuntu0.22.04.4`; `docker pull mysql:8` in this session.
+
+## 2026-10-07 · s1.4-tolerances · (1) nothing to correct in the tolerances contract
+
+- Tool said: `recon.config.load_tolerances` (harness 0.3.3) accepts exactly `version`, `full_diff_row_threshold`,
+  `sample_size`, `numeric_abs_tol`, `aggregate_rel_tol`, `source_concurrency`; the plan skill's `strict`
+  option is labelled only "Exact match, threshold 100000" and names no sample size, aggregate tolerance or
+  concurrency.
+- Did: wrote `.migration/recon_tolerances.json` with the six values the ticket spells out (`tol-1`, 100000,
+  1000, 0, 0, 1) — these are also the harness defaults, so a strict run and an unconfigured run grade the
+  same way; the file exists so the wave spec can pin a `version` and `tolerance_sha256`. No human review
+  substituted: `d-tolerances`, `d-source-concurrency` and the other four decisions were pre-selected by the
+  intake and are implemented as written. Loaded the file through `load_tolerances` to prove the harness
+  parses it and that its `sha256` equals `sha256sum` of the committed bytes
+  (`8ea506ef76b192076c5f023d25fe3591f384a40d3e044e7743679ba5d11e690d`), so the hash the PR body pins is the
+  one `result.json` will cite.
+- Evidence: this PR (file + PR body); `Tolerances(version='tol-1', sha256='8ea506ef…e690d', full_diff_row_threshold=100000,
+  sample_size=1000, numeric_abs_tol=0.0, aggregate_rel_tol=0.0, source_concurrency=1)`.
+
+## 2026-10-07 · s1.4-tolerances · (2) recon harness still not bound on a fresh worker VM
+
+- Tool said (UNT5-1 entry and `.devin/blueprint.yaml` knowledge `mongo-migration-run`): the harness is at
+  `/home/ubuntu/.venvs/recon/bin/recon` and `recon selftest` must PASS.
+- Observed: on this worker VM `bash: /home/ubuntu/.venvs/recon/bin/recon: No such file or directory`. The
+  blueprint from PR #26 lives on `mmp-rt/b1-mysql`, not `main`, so the snapshot this VM was built from never
+  ran its `maintenance` bind; the org venv again had only the drivers.
+- Did: re-ran the blueprint's own bind by hand —
+  `/home/ubuntu/.venvs/recon/bin/pip install -e "<plugin>/skills/mongo-recon-harness/harness[mongo,mysql]"`
+  (plugin clone at `caeb34dc`) -> `recon selftest PASS: 9 canonicalization rules exercised`. Every later
+  worker must expect the same until the blueprint is on the branch the snapshot builds from (the run
+  context already says to clone the plugin per session; the bind step belongs in that same recipe).
+- Evidence: shell output above (this session); `.devin/blueprint.yaml` lines 81-84 on `origin/mmp-rt/b1-mysql`.
+
+## 2026-10-07 · s1.4-tolerances · (3) step ordering differs from the plugin's plan skeleton
+
+- Tool said: `skills/migration-planning/SKILL.md` has `s1.4-tolerances` `depends_on: [s1.2-connectivity]`.
+- Observed: on this board the ticket depends on `s1.3-allowlist` (UNT5-2, Done) and `s1.2-connectivity`
+  (UNT5-4) is still Todo, waiting on the fixture.
+- Did: proceeded — the tolerances file is a pure contract and reads nothing from `connectivity.json`; the
+  harness only consumes both at `recon run`. No correction needed; recorded so the reorder is not read as
+  a skipped dependency.
+- Evidence: board UNT5 dependencies; `migration-planning/SKILL.md` line 182.
+
+## 2026-10-07 · s1.4-tolerances · (4) dbx-migration-factory guard: recipe held, no new friction
+
+- Did: every command in this session ran from `$HOME` with absolute paths and `git -C <repo>`; no shell
+  was blocked. The allowlist file stays as specified (`databases`, no `catalogs` key), per `d-dbx-guard`.
+- Evidence: this session's command log; UNT5-2 entry (5).
