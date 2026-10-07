@@ -12,6 +12,43 @@ initialize: |
   echo 'export JAVA_HOME=/usr/lib/jvm/jdk-21.0.2+13' >> $HOME/.bashrc
   echo 'export PATH=$JAVA_HOME/bin:$PATH' >> $HOME/.bashrc
 
+  # --- mongo-migration `online` variant, MySQL source (board UNT5, branch mmp-rt/b1-mysql; plan step s1.1-blueprint) ---
+  # Source + local-target fixture images; the fixture compose uses `pull_policy: never`, so pull them once here.
+  docker pull mysql:8
+  docker pull mongo:7
+  # Source client for the family (`mysql` CLI; trivial reads against the local fixture only).
+  if ! command -v mysql >/dev/null 2>&1; then
+    export DEBIAN_FRONTEND=noninteractive
+    sudo -n apt-get update
+    sudo -n apt-get install -y mysql-client-8.0
+  fi
+  # mongosh + MongoDB Database Tools (normally present from the org blueprint; install only if missing).
+  if ! command -v mongosh >/dev/null 2>&1 || ! command -v mongodump >/dev/null 2>&1; then
+    export DEBIAN_FRONTEND=noninteractive
+    sudo -n apt-get install -y ca-certificates curl gnupg
+    curl -fsSL https://pgp.mongodb.com/server-8.0.asc | gpg --dearmor | sudo -n tee /usr/share/keyrings/mongodb-server-8.0.gpg >/dev/null
+    echo "deb [ arch=amd64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/8.0 multiverse" | sudo -n tee /etc/apt/sources.list.d/mongodb-org-8.0.list >/dev/null
+    sudo -n apt-get update
+    sudo -n apt-get install -y mongodb-mongosh mongodb-database-tools
+  fi
+  # Atlas CLI (normally in ~/.local/bin from the org blueprint; install only if missing).
+  if ! PATH="$HOME/.local/bin:$PATH" command -v atlas >/dev/null 2>&1; then
+    export DEBIAN_FRONTEND=noninteractive
+    sudo -n apt-get install -y mongodb-atlas-cli
+  fi
+  # mongo-migration plugin 0.7.0, pinned, cloned beside the repo (the plugin is not installed in this org,
+  # so workers run its stdlib scripts directly and enforce the mongo_guard rules themselves).
+  if [ ! -d "$HOME/repos/mongo-migration-plugin/.git" ]; then
+    git clone https://github.com/Cognition-Partner-Workshops/mongo-migration-plugin "$HOME/repos/mongo-migration-plugin"
+  fi
+  git -C "$HOME/repos/mongo-migration-plugin" fetch -q origin
+  git -C "$HOME/repos/mongo-migration-plugin" checkout -q caeb34dc6fadcae4926b54d9f8648a16d3cced79
+  # Recon harness venv: the org blueprint creates /home/ubuntu/.venvs/recon with the drivers; extend, never replace.
+  mkdir -p /home/ubuntu/.venvs
+  if [ ! -x /home/ubuntu/.venvs/recon/bin/python ]; then /usr/bin/python3 -m venv /home/ubuntu/.venvs/recon; fi
+  /home/ubuntu/.venvs/recon/bin/python -m pip install -q -U pip setuptools
+  /home/ubuntu/.venvs/recon/bin/pip install -q "pymysql>=1.1" "pymongo>=4.6" "pytest>=7.0"
+
 # Every build: compile all 7 service jars with Java 21 and build local docker images
 # Install project dependencies (runs during builds, surfaced to agent at session start).
 maintenance: |
@@ -39,6 +76,15 @@ maintenance: |
     retry bash -c "cd '$d' && ./gradlew bootJar -x test --no-daemon --max-workers=2"
     retry bash -c "cd '$d' && docker build -t 'javatodev/$d' ."
   done
+
+  # --- mongo-migration `online` variant, MySQL source: bind the harness from the pinned plugin clone and verify ---
+  # The org maintenance step only binds the harness from /opt/.devin/plugins/cache, which is empty for this
+  # plugin in this org, so bind it from the pinned clone with the mongo+mysql extras (build-failing under `online`).
+  /home/ubuntu/.venvs/recon/bin/python -m pip install -q -e "$HOME/repos/mongo-migration-plugin/skills/mongo-recon-harness/harness[mongo,mysql]"
+  /home/ubuntu/.venvs/recon/bin/recon selftest
+  # Post-setup checks: images, clients, pinned plugin, `recon selftest`, and `mongosh` connecting with the
+  # org secret MONGODB_ATLAS_URI (roles listed read-only; never printed). MMP_RT_SRC_DSN is per-shell, not here.
+  bash "$HOME/repos/ts-java-spring-boot-internet-banking/.devin/mmp-postsetup.sh"
 
 knowledge:
   - name: java-version
@@ -70,3 +116,16 @@ knowledge:
         curl -H "Authorization: Bearer $TOKEN" http://localhost:8082/banking-core/api/v1/user
       Note: the postman env's client_id (internet-banking-core-client) is stale; use
       javatodev-internet-banking-api-client from the keycloak realm-export instead.
+  - name: mongo-migration-run
+    contents: |
+      Board UNT5 (MySQL 8 -> Atlas), run branch mmp-rt/b1-mysql; PR base is that branch, never main.
+      Plugin: $HOME/repos/mongo-migration-plugin @ caeb34dc (0.7.0); read AGENTS.md + the ticket's SKILL.md; run its
+      stdlib scripts directly; mongo_guard is advisory here, so export MONGO_GUARD_BASE_REF=origin/mmp-rt/b1-mysql
+      and honour .migration/allowed_targets.json yourself (only database mmp_rt_b1_mysql, <10 MB, never drop).
+      Harness: /home/ubuntu/.venvs/recon/bin/recon (installed with [mongo,mysql]); `recon selftest` must PASS.
+      Source: local mysql:8 fixture rebuilt per session (recipe in .migration/fixtures/w1-b01.json); its DSN is the
+      per-shell env var MMP_RT_SRC_DSN (JSON {"user","password","host","database"}, read-only user, never committed).
+      Source query concurrency 1, session time_zone='+00:00'. Target secret MONGODB_ATLAS_URI by name only.
+      Re-verify a VM with: bash .devin/mmp-postsetup.sh
+      The dbx-migration-factory plugin's shell guard blocks commands whose cwd is this repo while .migration/ exists
+      without allowed_targets.json: run from $HOME with absolute paths / `git -C` until UNT5-2 commits it.
