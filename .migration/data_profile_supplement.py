@@ -36,56 +36,56 @@ def main() -> int:
     ap.add_argument("--value-domain", nargs="*", action="extend", default=[],
                     metavar="TABLE.COLUMN")
     ap.add_argument("--statement-timeout", type=int, default=300)
-    a = ap.parse_args()
+    args = ap.parse_args()
 
-    sys.path.insert(0, str(a.plugin / "skills" / "schema-modeling"))
+    sys.path.insert(0, str(args.plugin / "skills" / "schema-modeling"))
     import data_profile as dp  # noqa: E402
     from catalog_census import parse_profile_queries  # noqa: E402
 
-    census = json.loads(a.census.read_text(encoding="utf-8"))
-    census_sha = hashlib.sha256(a.census.read_bytes()).hexdigest()
+    census = json.loads(args.census.read_text(encoding="utf-8"))
+    censusSha = hashlib.sha256(args.census.read_bytes()).hexdigest()
     templates = parse_profile_queries(
-        a.plugin / "skills" / "mongo-migration" / "profiles" / f"{a.family}.md",
+        args.plugin / "skills" / "mongo-migration" / "profiles" / f"{args.family}.md",
         section="profiling_queries")
     tables = census["tables"]
 
     stats: list[dict] = []
-    for tname in a.row_bytes:
-        table = tables[tname]
-        expr, excluded = dp._row_bytes_expr(a.family, table, "t")
-        frm, pct, skip = dp._from_clause(a.family, tname, table, "t", 10_000_000, False)
-        sql = templates["row_bytes"].replace("{row_bytes}", expr).replace("{table_from}", frm)
-        stats.append({"id": f"row_bytes:{tname}", "query_id": "row_bytes",
-                      "sql": None if skip else sql, "subject": {"table": tname},
-                      "sampled": pct is not None, "sample_pct": pct, "skipped_reason": skip,
-                      **({"excluded_columns": excluded} if excluded else {})})
-    for spec in a.value_domain:
-        tname, col = spec.rsplit(".", 1)
-        table = tables[tname]
-        if col not in {c["name"] for c in table["columns"]}:
+    for tableName in args.row_bytes:
+        table = tables[tableName]
+        bytesExpr, excludedColumns = dp._row_bytes_expr(args.family, table, "t")
+        fromClause, samplePct, skipReason = dp._from_clause(args.family, tableName, table, "t", 10_000_000, False)
+        sql = templates["row_bytes"].replace("{row_bytes}", bytesExpr).replace("{table_from}", fromClause)
+        stats.append({"id": f"row_bytes:{tableName}", "query_id": "row_bytes",
+                      "sql": None if skipReason else sql, "subject": {"table": tableName},
+                      "sampled": samplePct is not None, "sample_pct": samplePct, "skipped_reason": skipReason,
+                      **({"excluded_columns": excludedColumns} if excludedColumns else {})})
+    for spec in args.value_domain:
+        tableName, columnName = spec.rsplit(".", 1)
+        table = tables[tableName]
+        if columnName not in {c["name"] for c in table["columns"]}:
             print(f"supplement refused: {spec} is not a census column", file=sys.stderr)
             return 2
-        frm, pct, skip = dp._from_clause(a.family, tname, table, "t", 10_000_000, False)
-        sql = (templates["value_domain"].replace("{col}", dp._quote(a.family, col))
-               .replace("{table_from}", frm))
-        stats.append({"id": f"value_domain:{tname}.{col}", "query_id": "value_domain",
-                      "sql": None if skip else sql,
-                      "subject": {"table": tname, "column": col},
-                      "sampled": pct is not None, "sample_pct": pct, "skipped_reason": skip})
+        fromClause, samplePct, skipReason = dp._from_clause(args.family, tableName, table, "t", 10_000_000, False)
+        sql = (templates["value_domain"].replace("{col}", dp._quote(args.family, columnName))
+               .replace("{table_from}", fromClause))
+        stats.append({"id": f"value_domain:{tableName}.{columnName}", "query_id": "value_domain",
+                      "sql": None if skipReason else sql,
+                      "subject": {"table": tableName, "column": columnName},
+                      "sampled": samplePct is not None, "sample_pct": samplePct, "skipped_reason": skipReason})
 
-    results = dp.run_live(a.family, a.source_dsn_secret, stats, a.statement_timeout)
-    bundle = dp.build_profile(census, census_sha, a.family, stats, results, "live")
+    results = dp.run_live(args.family, args.source_dsn_secret, stats, args.statement_timeout)
+    bundle = dp.build_profile(census, censusSha, args.family, stats, results, "live")
     bundle["supplement_of"] = "data_profile.json"
     bundle["why"] = ("data_profile.py emits row_bytes only for relationship tables and "
                      "value_domain only for census trap columns; these stats were planned "
                      "by hand from the same census and rendered with the same templates")
-    a.out.parent.mkdir(parents=True, exist_ok=True)
-    a.out.write_text(json.dumps(bundle, indent=2) + "\n")
-    counts: dict[str, int] = {}
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps(bundle, indent=2) + "\n")
+    statusCounts: dict[str, int] = {}
     for s in bundle["stats"]:
-        counts[s["status"]] = counts.get(s["status"], 0) + 1
-    print(f"supplement written to {a.out}: stats={len(bundle['stats'])} "
-          + " ".join(f"{k}={v}" for k, v in sorted(counts.items())))
+        statusCounts[s["status"]] = statusCounts.get(s["status"], 0) + 1
+    print(f"supplement written to {args.out}: stats={len(bundle['stats'])} "
+          + " ".join(f"{k}={v}" for k, v in sorted(statusCounts.items())))
     return 0
 
 
