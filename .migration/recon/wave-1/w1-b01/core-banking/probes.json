@@ -1,0 +1,397 @@
+{
+ "database": "mmp_rt_b1_mysql",
+ "principal": {
+  "users": [
+   "mmp_rt_b1_mysql_rw"
+  ],
+  "roles": [
+   "readWrite@mmp_rt_b1_mysql"
+  ]
+ },
+ "collections": [
+  "_connectivity_probe",
+  "bankingCoreAccount",
+  "bankingCoreTransaction",
+  "bankingCoreUser",
+  "bankingCoreUtilityAccount"
+ ],
+ "dbStats": {
+  "collections": 5,
+  "objects": 24,
+  "dataSize": 3255,
+  "storageSize": 139264,
+  "indexSize": 290816,
+  "total_mb": 0.43
+ },
+ "counts": {
+  "_connectivity_probe": 0,
+  "bankingCoreAccount": 14,
+  "bankingCoreTransaction": 0,
+  "bankingCoreUser": 4,
+  "bankingCoreUtilityAccount": 6
+ },
+ "indexes": {
+  "bankingCoreAccount": [
+   {
+    "name": "_id_",
+    "key": [
+     [
+      "_id",
+      1
+     ]
+    ],
+    "unique": false,
+    "collation": null
+   },
+   {
+    "name": "number_1",
+    "key": [
+     [
+      "number",
+      1
+     ]
+    ],
+    "unique": true,
+    "collation": {
+     "locale": "en",
+     "strength": 2
+    }
+   },
+   {
+    "name": "userId_1",
+    "key": [
+     [
+      "userId",
+      1
+     ]
+    ],
+    "unique": false,
+    "collation": null
+   }
+  ],
+  "bankingCoreTransaction": [
+   {
+    "name": "_id_",
+    "key": [
+     [
+      "_id",
+      1
+     ]
+    ],
+    "unique": false,
+    "collation": null
+   },
+   {
+    "name": "accountId_1",
+    "key": [
+     [
+      "accountId",
+      1
+     ]
+    ],
+    "unique": false,
+    "collation": null
+   }
+  ],
+  "bankingCoreUser": [
+   {
+    "name": "_id_",
+    "key": [
+     [
+      "_id",
+      1
+     ]
+    ],
+    "unique": false,
+    "collation": null
+   },
+   {
+    "name": "identificationNumber_1",
+    "key": [
+     [
+      "identificationNumber",
+      1
+     ]
+    ],
+    "unique": true,
+    "collation": {
+     "locale": "en",
+     "strength": 2
+    }
+   }
+  ],
+  "bankingCoreUtilityAccount": [
+   {
+    "name": "_id_",
+    "key": [
+     [
+      "_id",
+      1
+     ]
+    ],
+    "unique": false,
+    "collation": null
+   },
+   {
+    "name": "providerName_1",
+    "key": [
+     [
+      "providerName",
+      1
+     ]
+    ],
+    "unique": false,
+    "collation": {
+     "locale": "en",
+     "strength": 2
+    }
+   }
+  ]
+ },
+ "fields": {
+  "bankingCoreUser": {
+   "docs": 4,
+   "extra_fields": {},
+   "_class": {
+    "null": 4
+   },
+   "_id": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "Int64": 4
+    }
+   },
+   "email": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "str": 4
+    }
+   },
+   "firstName": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "str": 4
+    }
+   },
+   "identificationNumber": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "str": 4
+    }
+   },
+   "lastName": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "str": 4
+    }
+   }
+  },
+  "bankingCoreAccount": {
+   "docs": 14,
+   "extra_fields": {},
+   "_class": {
+    "null": 14
+   },
+   "_id": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "Int64": 14
+    }
+   },
+   "number": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "str": 14
+    }
+   },
+   "type": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "str": 14
+    }
+   },
+   "status": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "str": 14
+    }
+   },
+   "actualBalance": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "Decimal128": 14
+    }
+   },
+   "availableBalance": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "Decimal128": 14
+    }
+   },
+   "userId": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "Int64": 14
+    }
+   }
+  },
+  "bankingCoreUtilityAccount": {
+   "docs": 6,
+   "extra_fields": {},
+   "_class": {
+    "null": 6
+   },
+   "_id": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "Int64": 6
+    }
+   },
+   "number": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "str": 6
+    }
+   },
+   "providerName": {
+    "missing": 0,
+    "null": 0,
+    "types": {
+     "str": 6
+    }
+   }
+  },
+  "bankingCoreTransaction": {
+   "docs": 0,
+   "extra_fields": {},
+   "_class": {},
+   "_id": {
+    "missing": 0,
+    "null": 0,
+    "types": {}
+   },
+   "amount": {
+    "missing": 0,
+    "null": 0,
+    "types": {}
+   },
+   "transactionType": {
+    "missing": 0,
+    "null": 0,
+    "types": {}
+   },
+   "referenceNumber": {
+    "missing": 0,
+    "null": 0,
+    "types": {}
+   },
+   "transactionId": {
+    "missing": 0,
+    "null": 0,
+    "types": {}
+   },
+   "accountId": {
+    "missing": 0,
+    "null": 0,
+    "types": {}
+   }
+  }
+ },
+ "duplicates": {
+  "bankingCoreUser._id": 0,
+  "bankingCoreAccount._id": 0,
+  "bankingCoreUtilityAccount._id": 0,
+  "bankingCoreTransaction._id": 0,
+  "bankingCoreAccount.number": 0,
+  "bankingCoreUser.identificationNumber": 0,
+  "bankingCoreUtilityAccount.providerName": 0
+ },
+ "decimal128": {
+  "actualBalance": {
+   "not_decimal128": 0,
+   "scale_histogram": {
+    "2": 14
+   }
+  },
+  "availableBalance": {
+   "not_decimal128": 0,
+   "scale_histogram": {
+    "2": 14
+   }
+  }
+ },
+ "references": {
+  "accounts_total": 14,
+  "accounts_userId_resolves": 14,
+  "accounts_userId_dangling": [],
+  "users_without_accounts": [],
+  "accounts_per_user": {
+   "1": 2,
+   "2": 3,
+   "3": 5,
+   "4": 4
+  },
+  "utility_accounts_with_userId": 0,
+  "transactions_total": 0,
+  "transactions_accountId_index": true
+ },
+ "collation_probes": {
+  "bankingCoreUser.identificationNumber": {
+   "probe_changed_case": true,
+   "exact_match_plain": 1,
+   "swapcase_plain": 0,
+   "swapcase_with_en2_collation": 1,
+   "swapcase_uses_IXSCAN": true
+  },
+  "bankingCoreUtilityAccount.providerName": {
+   "probe_changed_case": true,
+   "exact_match_plain": 1,
+   "swapcase_plain": 0,
+   "swapcase_with_en2_collation": 1,
+   "swapcase_uses_IXSCAN": true
+  },
+  "bankingCoreAccount.number": {
+   "probe_changed_case": false,
+   "exact_match_plain": 1,
+   "swapcase_plain": 1,
+   "swapcase_with_en2_collation": 1,
+   "swapcase_uses_IXSCAN": true
+  }
+ },
+ "enums": {
+  "account.type": [
+   "SAVINGS_ACCOUNT"
+  ],
+  "account.status": [
+   "ACTIVE"
+  ]
+ },
+ "boundaries": {
+  "account._id_min_max": [
+   1,
+   14
+  ],
+  "user._id_min_max": [
+   1,
+   4
+  ],
+  "utility._id_min_max": [
+   1,
+   6
+  ]
+ }
+}

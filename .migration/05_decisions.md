@@ -1117,3 +1117,69 @@ what was done, evidence. Nothing here authorizes a write: write scope is `.migra
   (b) chose the Tier 4 op set (7 ops) and the `$toLower` replay form of entry 5; (c) chose `max(_id)+1` id generation of entry 7; (d) patched the
   harness clone (entry 3). Each is a reviewable item for the manager, not a gate I ticked.
 - Evidence: `.migration/recon/core-banking/result.json`, `.migration/recon/core-banking/fixture/result.json`.
+
+## 2026-10-07 · s4.1.verify · (1) harness defect `MongoTargetAdapter.index_keys` reproduced UNPATCHED, then fixed in the verifier's plugin clone only
+
+- Tool said: plugin 0.7.0 at `caeb34d`, `recon run … --mode live --target-class migration_cluster` on `mmp_rt_b1_mysql` (which has
+  five secondary indexes) exits 1 with `adapters.py:287 in index_keys: if not all(v in (1, -1) for v in key_items.values())` →
+  `AttributeError: 'list' object has no attribute 'values'`, reached from `tiers.py:116 index_findings` / `engine.py:95 run_recon`.
+  The harness still emitted `result.json` with `verdict ERROR`, `merge_eligible false`, Tier 1 (4 checks) passed. Same file/line/
+  message as s4.1.b01 entry 3 — independently reproduced, not copied.
+- Did: applied the identical 2-line change (`for _, v in key_items` / `for k, v in key_items` instead of `.values()`/`.items()` on
+  the list) to the plugin clone only, re-ran the same command → `PASS`, tiers 9/5/24/7, 0 findings. No file in this repo was
+  changed for it. The verify report states in its first paragraph that the PASS is from a patched harness. Upstream fix still owed
+  in the plugin repo.
+- Evidence: `.migration/recon/wave-1/w1-b01/core-banking/unpatched/result.json` (ERROR), `…/core-banking/result.json` (PASS),
+  `.migration/recon/wave-1/harness-index_keys.patch`, verify report §4–5.
+
+## 2026-10-07 · s4.1.verify · (2) harness refuses the committed spec without `--collections` (`mmpFixtureMeta: no comparison key`)
+
+- Tool said: the first run, without `--collections`, stopped before any connection: `recon refused: mmpFixtureMeta: no comparison
+  key; supply one (set_key decision) before loading or reconciling` (exit 2). `mapping_spec.json` carries the `mmpFixtureMeta`
+  bookkeeping collection (s3.3 entry 2) with no key, and the CLI validates every collection in the spec.
+- Did: passed `--collections bankingCoreAccount,bankingCoreUser,bankingCoreTransaction,bankingCoreUtilityAccount` (the wave's four
+  write targets) on both runs — the batch worker's committed `result.json` lists the same four. Blind spot to state: the PASS covers
+  exactly those four collections; `mmpFixtureMeta` is never reconciled, by design, and the spec would be cleaner without it or with
+  an `exclude` flag. No spec change (verifier never edits mapping/tolerances).
+- Evidence: this ticket's PR body (command + refusal line); `result.json` `collections` array.
+
+## 2026-10-07 · s4.1.verify · (3) run mechanics under the dbx-migration-factory guard; manager finding on `preflight.py --grade/--verify`
+
+- Guard: every shell ran from `$HOME` with absolute paths / `git -C` (s1.3 entry 5). The harness resolves `.migration/allowed_targets.json`
+  from its process cwd, so a 4-line wrapper `os.chdir()`s into `~/mmp-recon/ws/` holding only a byte-identical copy of the committed
+  allowlist (sha256 `2717426d…`) before calling `recon.cli.main` — the shell cwd never enters the repo. `cd <worktree> &&
+  ./gradlew bootJar` was blocked ("allowed_targets.json must contain a non-empty 'catalogs' list"); `<worktree>/gradlew -p <abs
+  worktree> bootJar -x test` from `$HOME` works. `gradle-git-properties` then fails inside a `git worktree`
+  (`RepositoryNotFoundException: …/.git/worktrees/pr39`); built the PR-branch jar with `-x generateGitProperties` — build tooling
+  only, no source change.
+- Manager finding (recorded as instructed): `preflight.py --grade/--verify` shells bare `git` in the process cwd, which the guard
+  forbids inside the repo; the manager graded with `GIT_DIR=<repo>/.git GIT_WORK_TREE=<repo>` in the environment. A `--repo`/`-C`
+  style flag on `preflight.py` would remove the workaround.
+- Evidence: verify report §4, §8; this ticket's PR body.
+
+## 2026-10-07 · s4.1.verify · (4) app-level replay: substitutions for the missing config server, and one verifier misconfiguration
+
+- Did: first end-to-end run of `core-banking-service` from PR #39 against Atlas (JDK 21, `MMP_RT_B1_TARGET_URI`, config server and
+  Eureka disabled by `--spring.cloud.config.enabled=false --spring.config.import=optional:configserver: --eureka.client.enabled=false`)
+  on :8082, and `main` `957765d` against the MySQL fixture on :8081 with the same cloud overrides plus `spring.flyway.enabled=false`
+  and `spring.jpa.hibernate.ddl-auto=none` (the read-only `fixture_ro` cannot write `flyway_schema_history`; the source stays
+  untouched) and the JDBC URL/user/password taken from `MMP_RT_SRC_DSN` via env vars. 43 GETs compared on status + JSON body:
+  14 bank-account, 4 user (with embedded bankAccounts), 6 util-account, 16 mixed-case, 3 not-found → 43/43 identical. POST
+  transfer/payment not exercised (writes).
+- Verifier misconfiguration, corrected: my first `main` run also set `spring.jpa.open-in-view=false`, which made the legacy
+  `GET /api/v1/user/{identification}` return 400 `LazyInitializationException` (the mapper touches the lazy `accounts` collection
+  outside a transaction and relies on Boot's default open-in-view=true). Not a defect in either branch; re-run with defaults.
+  Human review substituted: the external config-server repo change (s3.3) is still a cutover prerequisite and was not verified.
+- Evidence: `.migration/recon/wave-1/w1-b01/core-banking/app-replay.json`; verify report §7.
+
+## 2026-10-07 · s4.1.verify · (5) blind spots stated; Atlas untouched; source and target principals as pinned
+
+- Blind spots: `findByNumber` casefold probe is vacuous (all 14 `number` values are digit-only); `bankingCoreTransaction` graded on
+  0 rows (exists, 0 docs, `accountId_1` present); `RECON_REDACT_SALT` is session-local so salted finding ids are not comparable to
+  the batch worker's — moot at 0 findings both sides.
+- Read-only posture: the existing Atlas user `mmp_rt_b1_mysql_rw` was rotated via Admin API v2 PATCH (HTTP 200, roles unchanged
+  `readWrite@mmp_rt_b1_mysql`, confirmed by `connectionStatus`); no user created; `MONGODB_ATLAS_URI` not used for recon. `dbStats`
+  before the first probe and after the last app request identical (`objects 24`, `dataSize 3255`, `indexSize 290816`, 0.43 MB);
+  `_connectivity_probe` pre-existing. Fixture: `mysql:8` → `8.4.11`, `+00:00`, counts 4/14/6/0 via `fixture_ro`, `CREATE` denied
+  (ERROR 1142). Nothing to correct.
+- Evidence: `.migration/recon/wave-1/w1-b01/core-banking/probes.json`; verify report §2, §3, §6.

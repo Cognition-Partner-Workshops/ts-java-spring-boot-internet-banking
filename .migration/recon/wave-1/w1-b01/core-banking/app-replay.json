@@ -1,0 +1,1540 @@
+{
+ "endpoints": 43,
+ "mismatches": 0,
+ "rows": [
+  {
+   "path": "/api/v1/account/bank-account/100015003000",
+   "main_mysql": [
+    200,
+    {
+     "id": 1,
+     "number": "100015003000",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 100000.0,
+     "actualBalance": 100000.0,
+     "user": null
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 1,
+     "number": "100015003000",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 100000.0,
+     "actualBalance": 100000.0,
+     "user": null
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/bank-account/100015003001",
+   "main_mysql": [
+    200,
+    {
+     "id": 2,
+     "number": "100015003001",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 100000.0,
+     "actualBalance": 100000.0,
+     "user": null
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 2,
+     "number": "100015003001",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 100000.0,
+     "actualBalance": 100000.0,
+     "user": null
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/bank-account/100015003002",
+   "main_mysql": [
+    200,
+    {
+     "id": 3,
+     "number": "100015003002",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 100000.0,
+     "actualBalance": 100000.0,
+     "user": null
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 3,
+     "number": "100015003002",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 100000.0,
+     "actualBalance": 100000.0,
+     "user": null
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/bank-account/100015003003",
+   "main_mysql": [
+    200,
+    {
+     "id": 4,
+     "number": "100015003003",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 12000.0,
+     "actualBalance": 12000.0,
+     "user": null
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 4,
+     "number": "100015003003",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 12000.0,
+     "actualBalance": 12000.0,
+     "user": null
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/bank-account/100015003004",
+   "main_mysql": [
+    200,
+    {
+     "id": 5,
+     "number": "100015003004",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 12000.0,
+     "actualBalance": 12000.0,
+     "user": null
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 5,
+     "number": "100015003004",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 12000.0,
+     "actualBalance": 12000.0,
+     "user": null
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/bank-account/100015003005",
+   "main_mysql": [
+    200,
+    {
+     "id": 6,
+     "number": "100015003005",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 12000.0,
+     "actualBalance": 12000.0,
+     "user": null
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 6,
+     "number": "100015003005",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 12000.0,
+     "actualBalance": 12000.0,
+     "user": null
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/bank-account/100015003006",
+   "main_mysql": [
+    200,
+    {
+     "id": 7,
+     "number": "100015003006",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 290000.0,
+     "actualBalance": 290000.0,
+     "user": null
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 7,
+     "number": "100015003006",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 290000.0,
+     "actualBalance": 290000.0,
+     "user": null
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/bank-account/100015003007",
+   "main_mysql": [
+    200,
+    {
+     "id": 8,
+     "number": "100015003007",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 290000.0,
+     "actualBalance": 290000.0,
+     "user": null
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 8,
+     "number": "100015003007",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 290000.0,
+     "actualBalance": 290000.0,
+     "user": null
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/bank-account/100015003008",
+   "main_mysql": [
+    200,
+    {
+     "id": 9,
+     "number": "100015003008",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 290000.0,
+     "actualBalance": 290000.0,
+     "user": null
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 9,
+     "number": "100015003008",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 290000.0,
+     "actualBalance": 290000.0,
+     "user": null
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/bank-account/100015003009",
+   "main_mysql": [
+    200,
+    {
+     "id": 10,
+     "number": "100015003009",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 365023.0,
+     "actualBalance": 365023.0,
+     "user": null
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 10,
+     "number": "100015003009",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 365023.0,
+     "actualBalance": 365023.0,
+     "user": null
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/bank-account/100015003010",
+   "main_mysql": [
+    200,
+    {
+     "id": 11,
+     "number": "100015003010",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 365023.0,
+     "actualBalance": 365023.0,
+     "user": null
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 11,
+     "number": "100015003010",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 365023.0,
+     "actualBalance": 365023.0,
+     "user": null
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/bank-account/100015003011",
+   "main_mysql": [
+    200,
+    {
+     "id": 12,
+     "number": "100015003011",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 89456.0,
+     "actualBalance": 365023.0,
+     "user": null
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 12,
+     "number": "100015003011",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 89456.0,
+     "actualBalance": 365023.0,
+     "user": null
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/bank-account/100015003012",
+   "main_mysql": [
+    200,
+    {
+     "id": 13,
+     "number": "100015003012",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 89456.0,
+     "actualBalance": 89456.0,
+     "user": null
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 13,
+     "number": "100015003012",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 89456.0,
+     "actualBalance": 89456.0,
+     "user": null
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/bank-account/100015003013",
+   "main_mysql": [
+    200,
+    {
+     "id": 14,
+     "number": "100015003013",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 889000.33,
+     "actualBalance": 889000.33,
+     "user": null
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 14,
+     "number": "100015003013",
+     "type": "SAVINGS_ACCOUNT",
+     "status": "ACTIVE",
+     "availableBalance": 889000.33,
+     "actualBalance": 889000.33,
+     "user": null
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/user/808829932V",
+   "main_mysql": [
+    200,
+    {
+     "id": 1,
+     "firstName": "Sam",
+     "lastName": "Silva",
+     "email": "sam@gmail.com",
+     "identificationNumber": "808829932V",
+     "bankAccounts": [
+      {
+       "id": 1,
+       "number": "100015003000",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 100000.0,
+       "actualBalance": 100000.0,
+       "user": null
+      },
+      {
+       "id": 2,
+       "number": "100015003001",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 100000.0,
+       "actualBalance": 100000.0,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 1,
+     "firstName": "Sam",
+     "lastName": "Silva",
+     "email": "sam@gmail.com",
+     "identificationNumber": "808829932V",
+     "bankAccounts": [
+      {
+       "id": 1,
+       "number": "100015003000",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 100000.0,
+       "actualBalance": 100000.0,
+       "user": null
+      },
+      {
+       "id": 2,
+       "number": "100015003001",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 100000.0,
+       "actualBalance": 100000.0,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/user/901830556V",
+   "main_mysql": [
+    200,
+    {
+     "id": 2,
+     "firstName": "Guru",
+     "lastName": "Darmaraj",
+     "email": "guru@gmail.com",
+     "identificationNumber": "901830556V",
+     "bankAccounts": [
+      {
+       "id": 3,
+       "number": "100015003002",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 100000.0,
+       "actualBalance": 100000.0,
+       "user": null
+      },
+      {
+       "id": 4,
+       "number": "100015003003",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 12000.0,
+       "actualBalance": 12000.0,
+       "user": null
+      },
+      {
+       "id": 5,
+       "number": "100015003004",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 12000.0,
+       "actualBalance": 12000.0,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 2,
+     "firstName": "Guru",
+     "lastName": "Darmaraj",
+     "email": "guru@gmail.com",
+     "identificationNumber": "901830556V",
+     "bankAccounts": [
+      {
+       "id": 3,
+       "number": "100015003002",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 100000.0,
+       "actualBalance": 100000.0,
+       "user": null
+      },
+      {
+       "id": 4,
+       "number": "100015003003",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 12000.0,
+       "actualBalance": 12000.0,
+       "user": null
+      },
+      {
+       "id": 5,
+       "number": "100015003004",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 12000.0,
+       "actualBalance": 12000.0,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/user/348829932V",
+   "main_mysql": [
+    200,
+    {
+     "id": 3,
+     "firstName": "Ragu",
+     "lastName": "Sivaraj",
+     "email": "ragu@gmail.com",
+     "identificationNumber": "348829932V",
+     "bankAccounts": [
+      {
+       "id": 6,
+       "number": "100015003005",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 12000.0,
+       "actualBalance": 12000.0,
+       "user": null
+      },
+      {
+       "id": 7,
+       "number": "100015003006",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 290000.0,
+       "actualBalance": 290000.0,
+       "user": null
+      },
+      {
+       "id": 8,
+       "number": "100015003007",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 290000.0,
+       "actualBalance": 290000.0,
+       "user": null
+      },
+      {
+       "id": 9,
+       "number": "100015003008",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 290000.0,
+       "actualBalance": 290000.0,
+       "user": null
+      },
+      {
+       "id": 10,
+       "number": "100015003009",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 365023.0,
+       "actualBalance": 365023.0,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 3,
+     "firstName": "Ragu",
+     "lastName": "Sivaraj",
+     "email": "ragu@gmail.com",
+     "identificationNumber": "348829932V",
+     "bankAccounts": [
+      {
+       "id": 6,
+       "number": "100015003005",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 12000.0,
+       "actualBalance": 12000.0,
+       "user": null
+      },
+      {
+       "id": 7,
+       "number": "100015003006",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 290000.0,
+       "actualBalance": 290000.0,
+       "user": null
+      },
+      {
+       "id": 8,
+       "number": "100015003007",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 290000.0,
+       "actualBalance": 290000.0,
+       "user": null
+      },
+      {
+       "id": 9,
+       "number": "100015003008",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 290000.0,
+       "actualBalance": 290000.0,
+       "user": null
+      },
+      {
+       "id": 10,
+       "number": "100015003009",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 365023.0,
+       "actualBalance": 365023.0,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/user/842829932V",
+   "main_mysql": [
+    200,
+    {
+     "id": 4,
+     "firstName": "Randor",
+     "lastName": "Manoon",
+     "email": "randor@gmail.com",
+     "identificationNumber": "842829932V",
+     "bankAccounts": [
+      {
+       "id": 11,
+       "number": "100015003010",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 365023.0,
+       "actualBalance": 365023.0,
+       "user": null
+      },
+      {
+       "id": 12,
+       "number": "100015003011",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 89456.0,
+       "actualBalance": 365023.0,
+       "user": null
+      },
+      {
+       "id": 13,
+       "number": "100015003012",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 89456.0,
+       "actualBalance": 89456.0,
+       "user": null
+      },
+      {
+       "id": 14,
+       "number": "100015003013",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 889000.33,
+       "actualBalance": 889000.33,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 4,
+     "firstName": "Randor",
+     "lastName": "Manoon",
+     "email": "randor@gmail.com",
+     "identificationNumber": "842829932V",
+     "bankAccounts": [
+      {
+       "id": 11,
+       "number": "100015003010",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 365023.0,
+       "actualBalance": 365023.0,
+       "user": null
+      },
+      {
+       "id": 12,
+       "number": "100015003011",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 89456.0,
+       "actualBalance": 365023.0,
+       "user": null
+      },
+      {
+       "id": 13,
+       "number": "100015003012",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 89456.0,
+       "actualBalance": 89456.0,
+       "user": null
+      },
+      {
+       "id": 14,
+       "number": "100015003013",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 889000.33,
+       "actualBalance": 889000.33,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/VODAFONE",
+   "main_mysql": [
+    200,
+    {
+     "id": 1,
+     "number": "8203232565",
+     "providerName": "VODAFONE"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 1,
+     "number": "8203232565",
+     "providerName": "VODAFONE"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/VERIZON",
+   "main_mysql": [
+    200,
+    {
+     "id": 2,
+     "number": "5464546545",
+     "providerName": "VERIZON"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 2,
+     "number": "5464546545",
+     "providerName": "VERIZON"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/SINGTEL",
+   "main_mysql": [
+    200,
+    {
+     "id": 3,
+     "number": "6546456464",
+     "providerName": "SINGTEL"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 3,
+     "number": "6546456464",
+     "providerName": "SINGTEL"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/HUTCH",
+   "main_mysql": [
+    200,
+    {
+     "id": 4,
+     "number": "7889987999",
+     "providerName": "HUTCH"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 4,
+     "number": "7889987999",
+     "providerName": "HUTCH"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/AIRTEL",
+   "main_mysql": [
+    200,
+    {
+     "id": 5,
+     "number": "2132123132",
+     "providerName": "AIRTEL"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 5,
+     "number": "2132123132",
+     "providerName": "AIRTEL"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/GIO",
+   "main_mysql": [
+    200,
+    {
+     "id": 6,
+     "number": "61645564646",
+     "providerName": "GIO"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 6,
+     "number": "61645564646",
+     "providerName": "GIO"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/user/808829932v",
+   "main_mysql": [
+    200,
+    {
+     "id": 1,
+     "firstName": "Sam",
+     "lastName": "Silva",
+     "email": "sam@gmail.com",
+     "identificationNumber": "808829932V",
+     "bankAccounts": [
+      {
+       "id": 1,
+       "number": "100015003000",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 100000.0,
+       "actualBalance": 100000.0,
+       "user": null
+      },
+      {
+       "id": 2,
+       "number": "100015003001",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 100000.0,
+       "actualBalance": 100000.0,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 1,
+     "firstName": "Sam",
+     "lastName": "Silva",
+     "email": "sam@gmail.com",
+     "identificationNumber": "808829932V",
+     "bankAccounts": [
+      {
+       "id": 1,
+       "number": "100015003000",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 100000.0,
+       "actualBalance": 100000.0,
+       "user": null
+      },
+      {
+       "id": 2,
+       "number": "100015003001",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 100000.0,
+       "actualBalance": 100000.0,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/user/901830556v",
+   "main_mysql": [
+    200,
+    {
+     "id": 2,
+     "firstName": "Guru",
+     "lastName": "Darmaraj",
+     "email": "guru@gmail.com",
+     "identificationNumber": "901830556V",
+     "bankAccounts": [
+      {
+       "id": 3,
+       "number": "100015003002",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 100000.0,
+       "actualBalance": 100000.0,
+       "user": null
+      },
+      {
+       "id": 4,
+       "number": "100015003003",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 12000.0,
+       "actualBalance": 12000.0,
+       "user": null
+      },
+      {
+       "id": 5,
+       "number": "100015003004",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 12000.0,
+       "actualBalance": 12000.0,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 2,
+     "firstName": "Guru",
+     "lastName": "Darmaraj",
+     "email": "guru@gmail.com",
+     "identificationNumber": "901830556V",
+     "bankAccounts": [
+      {
+       "id": 3,
+       "number": "100015003002",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 100000.0,
+       "actualBalance": 100000.0,
+       "user": null
+      },
+      {
+       "id": 4,
+       "number": "100015003003",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 12000.0,
+       "actualBalance": 12000.0,
+       "user": null
+      },
+      {
+       "id": 5,
+       "number": "100015003004",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 12000.0,
+       "actualBalance": 12000.0,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/user/348829932v",
+   "main_mysql": [
+    200,
+    {
+     "id": 3,
+     "firstName": "Ragu",
+     "lastName": "Sivaraj",
+     "email": "ragu@gmail.com",
+     "identificationNumber": "348829932V",
+     "bankAccounts": [
+      {
+       "id": 6,
+       "number": "100015003005",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 12000.0,
+       "actualBalance": 12000.0,
+       "user": null
+      },
+      {
+       "id": 7,
+       "number": "100015003006",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 290000.0,
+       "actualBalance": 290000.0,
+       "user": null
+      },
+      {
+       "id": 8,
+       "number": "100015003007",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 290000.0,
+       "actualBalance": 290000.0,
+       "user": null
+      },
+      {
+       "id": 9,
+       "number": "100015003008",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 290000.0,
+       "actualBalance": 290000.0,
+       "user": null
+      },
+      {
+       "id": 10,
+       "number": "100015003009",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 365023.0,
+       "actualBalance": 365023.0,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 3,
+     "firstName": "Ragu",
+     "lastName": "Sivaraj",
+     "email": "ragu@gmail.com",
+     "identificationNumber": "348829932V",
+     "bankAccounts": [
+      {
+       "id": 6,
+       "number": "100015003005",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 12000.0,
+       "actualBalance": 12000.0,
+       "user": null
+      },
+      {
+       "id": 7,
+       "number": "100015003006",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 290000.0,
+       "actualBalance": 290000.0,
+       "user": null
+      },
+      {
+       "id": 8,
+       "number": "100015003007",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 290000.0,
+       "actualBalance": 290000.0,
+       "user": null
+      },
+      {
+       "id": 9,
+       "number": "100015003008",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 290000.0,
+       "actualBalance": 290000.0,
+       "user": null
+      },
+      {
+       "id": 10,
+       "number": "100015003009",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 365023.0,
+       "actualBalance": 365023.0,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/user/842829932v",
+   "main_mysql": [
+    200,
+    {
+     "id": 4,
+     "firstName": "Randor",
+     "lastName": "Manoon",
+     "email": "randor@gmail.com",
+     "identificationNumber": "842829932V",
+     "bankAccounts": [
+      {
+       "id": 11,
+       "number": "100015003010",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 365023.0,
+       "actualBalance": 365023.0,
+       "user": null
+      },
+      {
+       "id": 12,
+       "number": "100015003011",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 89456.0,
+       "actualBalance": 365023.0,
+       "user": null
+      },
+      {
+       "id": 13,
+       "number": "100015003012",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 89456.0,
+       "actualBalance": 89456.0,
+       "user": null
+      },
+      {
+       "id": 14,
+       "number": "100015003013",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 889000.33,
+       "actualBalance": 889000.33,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 4,
+     "firstName": "Randor",
+     "lastName": "Manoon",
+     "email": "randor@gmail.com",
+     "identificationNumber": "842829932V",
+     "bankAccounts": [
+      {
+       "id": 11,
+       "number": "100015003010",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 365023.0,
+       "actualBalance": 365023.0,
+       "user": null
+      },
+      {
+       "id": 12,
+       "number": "100015003011",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 89456.0,
+       "actualBalance": 365023.0,
+       "user": null
+      },
+      {
+       "id": 13,
+       "number": "100015003012",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 89456.0,
+       "actualBalance": 89456.0,
+       "user": null
+      },
+      {
+       "id": 14,
+       "number": "100015003013",
+       "type": "SAVINGS_ACCOUNT",
+       "status": "ACTIVE",
+       "availableBalance": 889000.33,
+       "actualBalance": 889000.33,
+       "user": null
+      }
+     ]
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/Vodafone",
+   "main_mysql": [
+    200,
+    {
+     "id": 1,
+     "number": "8203232565",
+     "providerName": "VODAFONE"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 1,
+     "number": "8203232565",
+     "providerName": "VODAFONE"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/Verizon",
+   "main_mysql": [
+    200,
+    {
+     "id": 2,
+     "number": "5464546545",
+     "providerName": "VERIZON"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 2,
+     "number": "5464546545",
+     "providerName": "VERIZON"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/Singtel",
+   "main_mysql": [
+    200,
+    {
+     "id": 3,
+     "number": "6546456464",
+     "providerName": "SINGTEL"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 3,
+     "number": "6546456464",
+     "providerName": "SINGTEL"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/Hutch",
+   "main_mysql": [
+    200,
+    {
+     "id": 4,
+     "number": "7889987999",
+     "providerName": "HUTCH"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 4,
+     "number": "7889987999",
+     "providerName": "HUTCH"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/Airtel",
+   "main_mysql": [
+    200,
+    {
+     "id": 5,
+     "number": "2132123132",
+     "providerName": "AIRTEL"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 5,
+     "number": "2132123132",
+     "providerName": "AIRTEL"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/Gio",
+   "main_mysql": [
+    200,
+    {
+     "id": 6,
+     "number": "61645564646",
+     "providerName": "GIO"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 6,
+     "number": "61645564646",
+     "providerName": "GIO"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/vodafone",
+   "main_mysql": [
+    200,
+    {
+     "id": 1,
+     "number": "8203232565",
+     "providerName": "VODAFONE"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 1,
+     "number": "8203232565",
+     "providerName": "VODAFONE"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/verizon",
+   "main_mysql": [
+    200,
+    {
+     "id": 2,
+     "number": "5464546545",
+     "providerName": "VERIZON"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 2,
+     "number": "5464546545",
+     "providerName": "VERIZON"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/singtel",
+   "main_mysql": [
+    200,
+    {
+     "id": 3,
+     "number": "6546456464",
+     "providerName": "SINGTEL"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 3,
+     "number": "6546456464",
+     "providerName": "SINGTEL"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/hutch",
+   "main_mysql": [
+    200,
+    {
+     "id": 4,
+     "number": "7889987999",
+     "providerName": "HUTCH"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 4,
+     "number": "7889987999",
+     "providerName": "HUTCH"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/airtel",
+   "main_mysql": [
+    200,
+    {
+     "id": 5,
+     "number": "2132123132",
+     "providerName": "AIRTEL"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 5,
+     "number": "2132123132",
+     "providerName": "AIRTEL"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/gio",
+   "main_mysql": [
+    200,
+    {
+     "id": 6,
+     "number": "61645564646",
+     "providerName": "GIO"
+    }
+   ],
+   "pr39_atlas": [
+    200,
+    {
+     "id": 6,
+     "number": "61645564646",
+     "providerName": "GIO"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/bank-account/999999999999",
+   "main_mysql": [
+    400,
+    {
+     "code": "Requested entity not present in the DB.",
+     "message": "BANKING-CORE-SERVICE-1000"
+    }
+   ],
+   "pr39_atlas": [
+    400,
+    {
+     "code": "Requested entity not present in the DB.",
+     "message": "BANKING-CORE-SERVICE-1000"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/user/000000000X",
+   "main_mysql": [
+    400,
+    {
+     "code": "Requested entity not present in the DB.",
+     "message": "BANKING-CORE-SERVICE-1000"
+    }
+   ],
+   "pr39_atlas": [
+    400,
+    {
+     "code": "Requested entity not present in the DB.",
+     "message": "BANKING-CORE-SERVICE-1000"
+    }
+   ],
+   "equal": true
+  },
+  {
+   "path": "/api/v1/account/util-account/NOBODY",
+   "main_mysql": [
+    400,
+    {
+     "code": "Requested entity not present in the DB.",
+     "message": "BANKING-CORE-SERVICE-1000"
+    }
+   ],
+   "pr39_atlas": [
+    400,
+    {
+     "code": "Requested entity not present in the DB.",
+     "message": "BANKING-CORE-SERVICE-1000"
+    }
+   ],
+   "equal": true
+  }
+ ]
+}
