@@ -1,0 +1,467 @@
+{
+  "census_version": 2,
+  "source_family": "mysql",
+  "identifier_case": "default",
+  "mode": "live_catalog",
+  "inputs": [
+    {
+      "query_id": "tables",
+      "sha256": "84c65bf461866bfd94f0e49506b62da69a84978b3f38f01a1813e46ec06d2d14",
+      "rows": 5,
+      "origin": "live"
+    },
+    {
+      "query_id": "columns",
+      "sha256": "4c833ddeba72c983ea891d911590d95a03e48bc3d62c6c70a3451014acaab997",
+      "rows": 23,
+      "origin": "live"
+    },
+    {
+      "query_id": "constraints",
+      "sha256": "597dcca2abc268d68c037834d7bf614e9cdd52ad1b877eaed8ea2bc657cd92b2",
+      "rows": 6,
+      "origin": "live"
+    },
+    {
+      "query_id": "indexes",
+      "sha256": "b01ac93ec96a91f82be7956062fd18268b19d0cd8142f5ae44401aece96e5899",
+      "rows": 6,
+      "origin": "live"
+    },
+    {
+      "query_id": "routines",
+      "sha256": "6775200748c9fa8527df805daf0bcb7b7680a6546c225492a6b7496d7d1f6c0a",
+      "rows": 0,
+      "origin": "live"
+    },
+    {
+      "query_id": "triggers",
+      "sha256": "5b071303e41ce19d4eaafccac0be8e5173435532f93f8a67644d95f5d29c5d33",
+      "rows": 0,
+      "origin": "live"
+    },
+    {
+      "query_id": "events",
+      "sha256": "f7a06d2dcbea995531243cbd205c2ec01417854386faf6b99bff19c24478dd0b",
+      "rows": 0,
+      "origin": "live"
+    },
+    {
+      "query_id": "views",
+      "sha256": "9793efae7d307d53d789a39d785ce3a272ef68f9cd2c7f7610533e8b8450422c",
+      "rows": 0,
+      "origin": "live"
+    }
+  ],
+  "tables": {
+    "banking_core_account": {
+      "schema": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "nullable": false,
+          "default": null,
+          "comment": null,
+          "identity": true
+        },
+        {
+          "name": "actual_balance",
+          "type": "DECIMAL",
+          "length": null,
+          "precision": 19,
+          "scale": 2,
+          "nullable": true,
+          "default": null,
+          "comment": null
+        },
+        {
+          "name": "available_balance",
+          "type": "DECIMAL",
+          "length": null,
+          "precision": 19,
+          "scale": 2,
+          "nullable": true,
+          "default": null,
+          "comment": null
+        },
+        {
+          "name": "number",
+          "type": "VARCHAR",
+          "length": 255,
+          "precision": null,
+          "scale": null,
+          "nullable": true,
+          "default": null,
+          "comment": null
+        },
+        {
+          "name": "status",
+          "type": "VARCHAR",
+          "length": 255,
+          "precision": null,
+          "scale": null,
+          "nullable": true,
+          "default": null,
+          "comment": null
+        },
+        {
+          "name": "type",
+          "type": "VARCHAR",
+          "length": 255,
+          "precision": null,
+          "scale": null,
+          "nullable": true,
+          "default": null,
+          "comment": null
+        },
+        {
+          "name": "user_id",
+          "type": "BIGINT",
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "nullable": true,
+          "default": null,
+          "comment": null
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique": [],
+      "foreign_keys": [
+        {
+          "name": "FKt5uqy9p0v3rp3yhlgvm7ep0ij",
+          "columns": [
+            "user_id"
+          ],
+          "ref_table": "banking_core_user",
+          "ref_columns": [
+            "id"
+          ],
+          "on_delete": null,
+          "validated": true
+        }
+      ],
+      "checks": [],
+      "comment": null,
+      "partitioned": false,
+      "row_estimate": 14,
+      "file": "live_catalog",
+      "line": 0,
+      "primary_key_name": "PRIMARY"
+    },
+    "banking_core_user": {
+      "schema": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "nullable": false,
+          "default": null,
+          "comment": null,
+          "identity": true
+        },
+        {
+          "name": "email",
+          "type": "VARCHAR",
+          "length": 255,
+          "precision": null,
+          "scale": null,
+          "nullable": true,
+          "default": null,
+          "comment": null
+        },
+        {
+          "name": "first_name",
+          "type": "VARCHAR",
+          "length": 255,
+          "precision": null,
+          "scale": null,
+          "nullable": true,
+          "default": null,
+          "comment": null
+        },
+        {
+          "name": "identification_number",
+          "type": "VARCHAR",
+          "length": 255,
+          "precision": null,
+          "scale": null,
+          "nullable": true,
+          "default": null,
+          "comment": null
+        },
+        {
+          "name": "last_name",
+          "type": "VARCHAR",
+          "length": 255,
+          "precision": null,
+          "scale": null,
+          "nullable": true,
+          "default": null,
+          "comment": null
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique": [],
+      "foreign_keys": [],
+      "checks": [],
+      "comment": null,
+      "partitioned": false,
+      "row_estimate": 2,
+      "file": "live_catalog",
+      "line": 0,
+      "primary_key_name": "PRIMARY"
+    },
+    "banking_core_transaction": {
+      "schema": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "nullable": false,
+          "default": null,
+          "comment": null,
+          "identity": true
+        },
+        {
+          "name": "amount",
+          "type": "DECIMAL",
+          "length": null,
+          "precision": 19,
+          "scale": 2,
+          "nullable": true,
+          "default": null,
+          "comment": null
+        },
+        {
+          "name": "transaction_type",
+          "type": "VARCHAR",
+          "length": 30,
+          "precision": null,
+          "scale": null,
+          "nullable": false,
+          "default": null,
+          "comment": null
+        },
+        {
+          "name": "reference_number",
+          "type": "VARCHAR",
+          "length": 50,
+          "precision": null,
+          "scale": null,
+          "nullable": false,
+          "default": null,
+          "comment": null
+        },
+        {
+          "name": "transaction_id",
+          "type": "VARCHAR",
+          "length": 50,
+          "precision": null,
+          "scale": null,
+          "nullable": false,
+          "default": null,
+          "comment": null
+        },
+        {
+          "name": "account_id",
+          "type": "BIGINT",
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "nullable": true,
+          "default": null,
+          "comment": null
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique": [],
+      "foreign_keys": [
+        {
+          "name": "FKk9w2ogq595jbe8r2due7vv3xr",
+          "columns": [
+            "account_id"
+          ],
+          "ref_table": "banking_core_account",
+          "ref_columns": [
+            "id"
+          ],
+          "on_delete": null,
+          "validated": true
+        }
+      ],
+      "checks": [],
+      "comment": null,
+      "partitioned": false,
+      "row_estimate": 0,
+      "file": "live_catalog",
+      "line": 0,
+      "primary_key_name": "PRIMARY"
+    },
+    "banking_core_utility_account": {
+      "schema": null,
+      "columns": [
+        {
+          "name": "id",
+          "type": "BIGINT",
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "nullable": false,
+          "default": null,
+          "comment": null,
+          "identity": true
+        },
+        {
+          "name": "number",
+          "type": "VARCHAR",
+          "length": 255,
+          "precision": null,
+          "scale": null,
+          "nullable": true,
+          "default": null,
+          "comment": null
+        },
+        {
+          "name": "provider_name",
+          "type": "VARCHAR",
+          "length": 255,
+          "precision": null,
+          "scale": null,
+          "nullable": true,
+          "default": null,
+          "comment": null
+        }
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "unique": [],
+      "foreign_keys": [],
+      "checks": [],
+      "comment": null,
+      "partitioned": false,
+      "row_estimate": 0,
+      "file": "live_catalog",
+      "line": 0,
+      "primary_key_name": "PRIMARY"
+    },
+    "mmp_fixture_meta": {
+      "schema": null,
+      "columns": [
+        {
+          "name": "initialized_at",
+          "type": "TIMESTAMP",
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "nullable": false,
+          "default": "CURRENT_TIMESTAMP",
+          "comment": null
+        },
+        {
+          "name": "scripts_failed",
+          "type": "INT",
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "nullable": false,
+          "default": null,
+          "comment": null
+        }
+      ],
+      "primary_key": [],
+      "unique": [],
+      "foreign_keys": [],
+      "checks": [],
+      "comment": null,
+      "partitioned": false,
+      "row_estimate": 0,
+      "file": "live_catalog",
+      "line": 0
+    }
+  },
+  "indexes": [
+    {
+      "name": "FKt5uqy9p0v3rp3yhlgvm7ep0ij",
+      "table": "banking_core_account",
+      "columns": [
+        "user_id"
+      ],
+      "unique": false,
+      "filtered": false
+    },
+    {
+      "name": "FKk9w2ogq595jbe8r2due7vv3xr",
+      "table": "banking_core_transaction",
+      "columns": [
+        "account_id"
+      ],
+      "unique": false,
+      "filtered": false
+    }
+  ],
+  "sequences": [],
+  "triggers": [],
+  "views": [],
+  "materialized_views": [],
+  "plsql_units": [],
+  "scheduler_jobs": [],
+  "seed_rows": {},
+  "relationships": [
+    {
+      "parent": "banking_core_user",
+      "child": "banking_core_account",
+      "child_columns": [
+        "user_id"
+      ],
+      "parent_columns": [
+        "id"
+      ],
+      "on_delete": null,
+      "cardinality": "1:N",
+      "cardinality_basis": "assumed",
+      "evidence": "FK FKt5uqy9p0v3rp3yhlgvm7ep0ij",
+      "parent_known": true
+    },
+    {
+      "parent": "banking_core_account",
+      "child": "banking_core_transaction",
+      "child_columns": [
+        "account_id"
+      ],
+      "parent_columns": [
+        "id"
+      ],
+      "on_delete": null,
+      "cardinality": "1:N",
+      "cardinality_basis": "assumed",
+      "evidence": "FK FKk9w2ogq595jbe8r2due7vv3xr",
+      "parent_known": true
+    }
+  ],
+  "traps": [],
+  "findings": [
+    {
+      "kind": "no_primary_key",
+      "table": "mmp_fixture_meta"
+    }
+  ],
+  "unparsed": []
+}

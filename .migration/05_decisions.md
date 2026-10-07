@@ -294,3 +294,55 @@ what was done, evidence. Nothing here authorizes a write: write scope is `.migra
   worker VM again lacked the `mysql` client and the `mysql:8` image (blueprint from PR #26 not yet in the snapshot);
   installed with the blueprint's own commands, as UNT5-5 did.
 - Evidence: fixture re-measurement and `SHOW GRANTS` transcript in the PR body.
+
+## 2026-10-07 · s2.1-census · (1) catalog census has no scope filter: fixture scaffolding `mmp_fixture_meta` lands in census.json
+
+- Tool said: `catalog_census.py --family mysql` runs the profile's `discovery_commands` verbatim over `table_schema = DATABASE()`
+  and exposes no `--include`/`--exclude`; the live census therefore holds **5** tables: the 4 in-scope core-banking tables plus
+  `mmp_fixture_meta` (the plugin's own `mysql-init.sh` readiness marker: `initialized_at TIMESTAMP, scripts_failed INT`, no PK,
+  0 rows), with one finding `{"kind": "no_primary_key", "table": "mmp_fixture_meta"}`. `census_diff.py census.json ddl_census.json`
+  -> exit 1, exactly one line: `table mmp_fixture_meta: a=present b=absent`.
+- Did: committed the live census **unedited** (hand-editing the bundle would break the "never hand-edit, rerun census -> proposal
+  -> patch" rule and the `inputs` sha256 pins). Disposition: `mmp_fixture_meta` is fixture scaffolding, out of scope, and does not
+  exist on the customer source; the DDL census of the Flyway files (`/tmp`-side artifact, not committed) is the scope authority
+  and the two agree on every in-scope object. The model step (`model_proposal.py`) will otherwise propose a `mmp_fixture_meta`
+  collection with a `no_comparison_key` item: that step must drop it (recorded here so it is not read as a design finding).
+  The `no_primary_key` finding is dispositioned the same way. No human review substituted: scope was fixed by the intake.
+- Evidence: `.migration/census.json` (`tables` has 5 keys, `findings` has 1 entry); diff output in the UNT5-6 PR body.
+
+## 2026-10-07 · s2.1-census · (2) `row_estimate` in the live census is InnoDB's `table_rows` guess, not a count
+
+- Tool said: `census_contract.py` documents `row_estimate` as "the catalog's own estimate (MySQL `table_rows`)". The live census
+  reports `banking_core_user: 2`, `banking_core_account: 14`, `banking_core_utility_account: 0`, `banking_core_transaction: 0`.
+- Observed: `SELECT COUNT(*)` as `fixture_ro` in the same session gives **4 / 14 / 6 / 0** (= `.migration/fixtures/w1-b01.json`
+  `row_counts`). `information_schema.tables.table_rows` is an InnoDB statistics estimate and is stale/approximate on tables
+  that were never `ANALYZE`d; the source is read-only so no `ANALYZE TABLE` was run to refresh it (rule 1).
+- Did: nothing to the census (`census_diff` ignores `row_estimate` by design). Recorded so that no later step treats
+  `row_estimate` as a row count: the fixture manifest and the recon harness's own counts are the only row-count authority.
+- Evidence: census `tables.*.row_estimate`; count transcript in the PR body.
+
+## 2026-10-07 · s2.1-census · (3) `bigint(20)` display width and FK index names: no diff, nothing to correct
+
+- Tool said (ticket): expect possible diffs on `bigint(20)` display width and FK index names.
+- Observed: the DDL census records `BIGINT length 20` (as written in the Flyway files) and the live census `BIGINT length null`
+  (MySQL 8.4 no longer stores integer display widths; `column_type` is `bigint`). `census_diff.py` canonicalizes integer
+  display widths away except `tinyint(1)`, so no column diff was raised. FK-backing indexes are named identically on both
+  sides (`FKt5uqy9p0v3rp3yhlgvm7ep0ij`, `FKk9w2ogq595jbe8r2due7vv3xr`: Flyway declared them explicitly with `KEY`), and the diff
+  compares indexes by (table, columns, unique) anyway. Coverage: tables 5 = 4 in scope + 1 scaffolding; PKs 4; unique 0;
+  FKs 2 (`account.user_id -> user.id`, `transaction.account_id -> account.id`, `on_delete` null = NO ACTION); indexes 2
+  (both FK-backing, non-unique); routines 0, triggers 0, events 0, views 0; `unparsed` 0 on both sides — every object in
+  exactly one bucket, and the two censuses agree on all of them.
+- Evidence: `census_diff.py` output (1 line, see entry 1); both bundles' `indexes` arrays.
+
+## 2026-10-07 · s2.1-census · (4) worker-VM friction, same as s1.4/s1.2: harness unbound, no `mysql` client, guard recipe held
+
+- Observed: fresh worker VM again had no `/home/ubuntu/.venvs/recon/bin/recon` (bound by hand with the blueprint's
+  `pip install -e ".../harness[mongo,mysql]"` from the plugin clone at `caeb34dc` -> `recon selftest PASS`; `catalog_census.py`
+  imports `recon.adapters.parse_mysql_secret`, so it must run under that venv's Python, not the system `python3`, which has no
+  `pymysql`). No `mysql` client on the host either: the manifest's root-side rebuild steps were run through
+  `docker exec schema-modeling-mysql-1 mysql ...` instead (same statements, same `MYSQL_PWD` env; nothing else changed in the
+  recipe). Fixture rebuilt: `mmp_fixture_meta.scripts_failed = 0`, MySQL 8.4.11, `@@global.time_zone = +00:00`,
+  `fixture_ro` grants `USAGE` + `SELECT, SHOW VIEW ON banking_core_service.*`, rows 4/14/6/0.
+- Did: every command ran from `$HOME` with absolute paths / `git -C`; `--out` absolute; the census was written to
+  `$HOME/mmp-census/` and copied into `.migration/`. No shell was blocked by the dbx-migration-factory guard.
+- Evidence: this session's command log; UNT5-5 / UNT5-3 (2) / UNT5-4 (4) entries above.
