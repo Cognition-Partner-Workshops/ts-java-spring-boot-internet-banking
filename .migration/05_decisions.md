@@ -919,3 +919,47 @@ what was done, evidence. Nothing here authorizes a write: write scope is `.migra
   not of a working copy. Spec, decisions, census, profile, access and fixture files untouched; this step adds only these four
   ledger entries. Branch rebased onto `origin/mmp-rt/b1-mysql` immediately before the PR (ledger append-only, no parallel writer).
 - Evidence: this session's command log; PR body.
+
+## 2026-10-07 · s4.1.0-preflight · (1) corrected hypothesis: `preflight.py` does not read `allowed_targets.json` from `origin/main` — no gap, nothing to point elsewhere
+
+- Ticket said: "Known plugin gap to watch: `preflight.py` may look for `allowed_targets.json` on `origin/main`; if it does, report it
+  and point it at `origin/mmp-rt/b1-mysql` only via a documented env var or flag". s3.3 entry 2 had already observed it does not.
+- Confirmed three ways, plugin 0.7.0 at `caeb34d`: (a) code — `skills/wave-preflight/preflight.py` names `allowed_targets.json` only
+  in `MIGRATION_LAYOUT` (line 79, the layout-warning whitelist) and in the message printed when `.migration/` is absent (line 113);
+  the only git calls (`_git`, `fetch_branches`, `committed_text`, lines 141-170) are reached from `main()` solely under `if args.grade`
+  (wave-close grading / `--verify`), never on the `--emit-tickets` path; there is no `origin/main`, `MONGO_GUARD_BASE_REF` or
+  `os.environ` read in the file. (b) run — `GIT_TRACE=1 python3 .../preflight.py --wave <spec> --root <repo>` logs 0 git
+  invocations. (c) run — the same spec against `--root` = a scratch directory holding only a copy of `.migration/` and **no `.git`**
+  exits 0 with the same `manifest_sha f672bf2f9220`. `origin/main` is consulted only by `hooks/mongo_guard.py` (lines 88-95:
+  `MONGO_GUARD_BASE_REF` override, then `origin/HEAD`, then `origin/main`/`origin/master`; s1.3 entry 1).
+- Did: nothing — no env var, no flag, no plugin edit; the hypothesis is withdrawn, not a gap. `MONGO_GUARD_BASE_REF=origin/mmp-rt/b1-mysql`
+  remains the recipe for `mongo_guard` (writing steps), not for preflight.
+- Evidence: this ticket's PR body (commands + output); `preflight.py` lines 79, 113, 141-170, 580-640; `mongo_guard.py` 88-95.
+
+## 2026-10-07 · s4.1.0-preflight · (2) spec used UNCHANGED from s3.3; `manifest_sha f672bf2f9220` reproduced; both ticket blocks emitted; nothing to correct
+
+- Did: took `wave-1.proposal.json` as attached to UNT5-12 / UNT5-13 byte for byte (file sha256
+  `0f37cc09ecd0d374a784146b44966b84bfe135e5b5a687e14c8dffa516cae7cc`), re-verified every pin against the committed bytes on
+  `origin/mmp-rt/b1-mysql` at `5bf9999` (merge of PR #37): `git -C <repo> show origin/mmp-rt/b1-mysql:.migration/mapping_spec.json |
+  sha256sum` = `669b4e98932d00d893b249ba66fa88c9c44e89831b50d7370d85ff681a2a0c38` (`version` `map-draft-3`),
+  `.../recon_tolerances.json` = `8ea506ef76b192076c5f023d25fe3591f384a40d3e044e7743679ba5d11e690d` (`version` `tol-1`);
+  `connectivity.json` `source_access live` / `target_access migration_cluster`; `fixtures/w1-b01.json` present with `source`,
+  `method synthetic`, `masked_columns []`, `produced_at`, `produced_by`, `row_counts`; write targets = the four camelCase
+  collections `mapping_spec.json` `collections[*].collection` emits (not the snake_case names in the step text; `mmpFixtureMeta`
+  and `_connectivity_probe` excluded, s3.3 entry 2). No field changed, so `python3 <plugin>/skills/wave-preflight/preflight.py
+  --wave $HOME/mmp-s410/wave-1.json --root <abs repo> --emit-tickets` -> exit 0, `wave 1 OK: 1 batches, manifest_sha f672bf2f9220`,
+  blocks for `w1-b01` and `wave-1-verify` emitted (`auto_merge eligible: False`). `g-preflight-1` evidence is on the ticket.
+- Observed, cosmetic only: the verifier block prints the write targets sorted alphabetically while the batch block keeps the spec's
+  order — same four names, same set; `manifest_sha` is key-order independent and unaffected. The stderr line `05_decisions.md,
+  data_profile.supplement.json, data_profile_supplement.py are not read by any tool` is the known layout warning (s1.3 entry 3),
+  non-fatal, nothing renamed. The spec stays out of `.migration/` (attached to the ticket, not committed).
+- Evidence: full preflight transcript (stdout + stderr) in the PR body and on the ticket; the attached `wave-1.json`.
+
+## 2026-10-07 · s4.1.0-preflight · (3) run mechanics: files only; dbx-migration-factory guard blocked the one `cd <repo>` shell, nothing else to correct
+
+- Did: no fixture rebuilt, no source connection, no Atlas connection, no harness run. The first shell that did `cd <repo> && …` was
+  rejected by the org-wide dbx-migration-factory PreToolUse guard ("allowed_targets.json must contain a non-empty 'catalogs' list" —
+  the Mongo-shaped allowlist, s1.3 entry 5); every later command ran from `$HOME` with absolute paths / `git -C <repo>` and
+  `--root <abs repo>`. The plugin's own `mongo_guard` hook is not installed in this session (advisory, s1.3 entry 2) and no write
+  happened for it to judge. Inputs read as committed on `origin/mmp-rt/b1-mysql` at `5bf9999`; this step adds only these three
+  ledger entries. Branch rebased onto `origin/mmp-rt/b1-mysql` immediately before the PR (ledger append-only, no parallel writer).
