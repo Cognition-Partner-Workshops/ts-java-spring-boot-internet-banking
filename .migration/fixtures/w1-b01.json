@@ -1,0 +1,91 @@
+{
+  "batch": "w1-b01",
+  "source": "mysql",
+  "method": "synthetic",
+  "seed_method": "flyway_seed",
+  "method_note": "preflight.py FIXTURE_METHODS accepts only synthetic|masked_export; the ticket's `flyway_seed` is kept in seed_method. Rows come from the repo's Flyway seed V1.0.20210427174721__temp_data.sql (synthetic demo data); no production data, nothing to mask.",
+  "masked_columns": [],
+  "produced_at": "2026-10-07T00:52:09Z",
+  "produced_by": "devin-2fb2c7d62f52401ab7dce4761e28b0c9 (ticket UNT5-5, plan step s2.4-fixture)",
+  "row_counts": {
+    "banking_core_user": 4,
+    "banking_core_account": 14,
+    "banking_core_utility_account": 6,
+    "banking_core_transaction": 0
+  },
+  "row_count_method": "SELECT COUNT(*) per table as fixture_ro with SET SESSION TRANSACTION READ ONLY and SET time_zone='+00:00'",
+  "known_limits": [
+    "banking_core_transaction has 0 rows: the Flyway seed never inserts transactions, so fan-out (account -> transactions) cannot be measured on this fixture; data_profile fanout for that edge will read 0 and must be treated as unmeasured, not as 1:0.",
+    "mysql:8 currently resolves to MySQL 8.4.11 (digest in server.image_digest), not an 8.0.x build; consistent with the app's own docker-compose/mysql/Dockerfile (FROM mysql:8.4.0)."
+  ],
+  "database": "banking_core_service",
+  "in_scope_tables": [
+    "banking_core_user",
+    "banking_core_account",
+    "banking_core_utility_account",
+    "banking_core_transaction"
+  ],
+  "server": {
+    "image": "mysql:8",
+    "image_digest": "sha256:6ea90827b1100f8f2ae306a539f86d2c264a26ed435a2a9f75551dd5c3aeb242",
+    "version": "8.4.11",
+    "global_time_zone": "+00:00",
+    "time_zone_pin": "SET PERSIST time_zone='+00:00' run once as root on the fixture (persisted in the mysql-data volume); the recon harness also runs SET time_zone='+00:00' per session"
+  },
+  "mmp_fixture_meta": {
+    "scripts_failed": 0,
+    "initialized_at": "2026-10-07 00:49:56"
+  },
+  "ddl_dir": "core-banking-service/src/main/resources/db/migration",
+  "scripts_run_in_order": [
+    {
+      "file": "V1.0.20210427174638__create_base_table_structure.sql",
+      "sha256": "360b7154c6c4143ca5b49fb8923329424314e2441bc88d4d2caf0a5d43bfffba"
+    },
+    {
+      "file": "V1.0.20210427174721__temp_data.sql",
+      "sha256": "40f9816f27bb5bfd1802f430bfb8adb9b108bac532e342616efe5c3044cd76b2"
+    },
+    {
+      "file": "V1.0.20210429210839__create_transaction_table.sql",
+      "sha256": "7689014557353d910115c0743a78d969ed3198aaa154386ecebfbb279a00aab7"
+    }
+  ],
+  "read_only_user": {
+    "name": "fixture_ro",
+    "grants": "SELECT, SHOW VIEW ON banking_core_service.*",
+    "verified": "CREATE TABLE and INSERT denied (errors 1792 / 1142)"
+  },
+  "dsn": {
+    "env_var": "MMP_RT_SRC_DSN",
+    "shape": {
+      "user": "fixture_ro",
+      "password": "<local, never committed>",
+      "host": "127.0.0.1",
+      "port": 3306,
+      "database": "banking_core_service"
+    },
+    "env_file": "$HOME/.mmp-rt/b1-mysql.env (chmod 600, outside the repo; `source` it per shell). Root/RO passwords live in $HOME/.mmp-rt/b1-mysql.fixture-admin.env. Any copy inside the repo must match the .gitignore pattern .migration/**/*.env",
+    "source_query_concurrency": 1
+  },
+  "rebuild": {
+    "plugin": "https://github.com/Cognition-Partner-Workshops/mongo-migration-plugin @ caeb34dc6fadcae4926b54d9f8648a16d3cced79 (0.7.0), cloned at $HOME/repos/mongo-migration-plugin",
+    "steps": [
+      "docker pull mysql:8   # compose uses pull_policy: never",
+      "mkdir -p $HOME/.mmp-rt && printf 'MYSQL_FIXTURE_PWD=%s\\nMYSQL_FIXTURE_RO_PWD=%s\\n' \"$(openssl rand -hex 12)\" \"$(openssl rand -hex 12)\" > $HOME/.mmp-rt/b1-mysql.fixture-admin.env && chmod 600 $HOME/.mmp-rt/b1-mysql.fixture-admin.env && source $HOME/.mmp-rt/b1-mysql.fixture-admin.env",
+      "cd $HOME/repos/mongo-migration-plugin && MYSQL_FIXTURE_PWD=$MYSQL_FIXTURE_PWD MYSQL_FIXTURE_DB=banking_core_service MYSQL_DDL_DIR=$HOME/repos/ts-java-spring-boot-internet-banking/core-banking-service/src/main/resources/db/migration docker compose -f skills/schema-modeling/docker-compose.local.yml --profile mysql up -d mysql",
+      "docker compose -f skills/schema-modeling/docker-compose.local.yml --profile mysql ps   # wait for (healthy); on failure: docker compose ... logs --no-log-prefix mysql | grep '^== '",
+      "MYSQL_PWD=$MYSQL_FIXTURE_PWD mysql -h 127.0.0.1 -uroot banking_core_service -e \"SELECT * FROM mmp_fixture_meta\"   # scripts_failed must be 0",
+      "MYSQL_PWD=$MYSQL_FIXTURE_PWD mysql -h 127.0.0.1 -uroot -e \"CREATE USER IF NOT EXISTS 'fixture_ro'@'%' IDENTIFIED BY '$MYSQL_FIXTURE_RO_PWD'; GRANT SELECT, SHOW VIEW ON banking_core_service.* TO 'fixture_ro'@'%'; SET PERSIST time_zone='+00:00';\"",
+      "printf 'export MMP_RT_SRC_DSN=%s\\n' \"'{\\\"user\\\":\\\"fixture_ro\\\",\\\"password\\\":\\\"$MYSQL_FIXTURE_RO_PWD\\\",\\\"host\\\":\\\"127.0.0.1\\\",\\\"port\\\":3306,\\\"database\\\":\\\"banking_core_service\\\"}'\" > $HOME/.mmp-rt/b1-mysql.env && chmod 600 $HOME/.mmp-rt/b1-mysql.env && source $HOME/.mmp-rt/b1-mysql.env",
+      "re-measure: SELECT COUNT(*) on the 4 tables as fixture_ro must equal row_counts in this manifest (gate g-fixture-ready)"
+    ],
+    "teardown": "cd $HOME/repos/mongo-migration-plugin && docker compose -f skills/schema-modeling/docker-compose.local.yml --profile mysql down -v   # -v drops the mysql-data volume so the init hook runs again"
+  },
+  "gates": {
+    "g-fixture-ready": {
+      "scripts_failed": 0,
+      "row_counts_measured_as": "fixture_ro, SELECT COUNT(*), 2 independent measurements (mysql CLI as root, PyMySQL as fixture_ro) agree"
+    }
+  }
+}
