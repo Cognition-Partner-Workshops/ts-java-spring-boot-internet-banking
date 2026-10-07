@@ -1,5 +1,5 @@
 {
-  "version": "map-draft-2",
+  "version": "map-draft-3",
   "source_family": "mysql",
   "collections": [
     {
@@ -114,6 +114,14 @@
             {
               "kind": "decision",
               "ref": "access_pattern ap-c0f0ff167d: hot lookup by account number returns Optional (at most one row); the source DDL has no UNIQUE on number, the fixture's 14 numbers are distinct, the target index is declared unique per the ticket's index plan"
+            },
+            {
+              "kind": "decision",
+              "ref": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql: known incompatibility: the fixture-independent DDL has no UNIQUE on banking_core_account.number (only the PK and the user_id KEY), so the target unique index is stricter than the source. Kept unique on purpose: BankAccountRepository.findByNumber (repository/BankAccountRepository.java:10) returns Optional<> and treats number as a key lookup. Load policy: a duplicate number in a real export must FAIL the createIndex/load visibly (surfaced in the ticket), never be deduplicated or hidden."
+            },
+            {
+              "kind": "decision",
+              "ref": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql: MySQL 8 default collation utf8mb4_0900_ai_ci (case-insensitive): the DDL declares no CHARSET/COLLATE and the census does not capture collation_name. Selected d-collation: create this index with collation {locale: 'en', strength: 2} so lookups keep MySQL semantics, and apply collation_casefold in recon to this field only. NOT machine-expressible: the spec's index schema carries keys+unique only (model_patch._index, recon config._index_spec) and field rules cannot be added by a decision op; this note is the only carrier -> app/index-creation constraint handed to s4.1.b01 (see 05_decisions.md s3.2 entry 3)."
             }
           ],
           "unique": true
@@ -220,6 +228,14 @@
             {
               "kind": "decision",
               "ref": "access_pattern ap-caf6a913b3: warm lookup by identification number returns Optional (at most one row); the source DDL has no UNIQUE on identification_number, the fixture's 4 values are distinct, the target index is declared unique per the ticket's index plan"
+            },
+            {
+              "kind": "decision",
+              "ref": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql: known incompatibility: the fixture-independent DDL has no UNIQUE on banking_core_user.identification_number (PK only), so the target unique index is stricter than the source. Kept unique on purpose: UserRepository.findByIdentificationNumber (repository/UserRepository.java:10) returns Optional<> and treats it as a key lookup. Load policy: a duplicate identification_number in a real export must FAIL the createIndex/load visibly, never be deduplicated or hidden."
+            },
+            {
+              "kind": "decision",
+              "ref": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql: MySQL 8 default collation utf8mb4_0900_ai_ci (case-insensitive): the DDL declares no CHARSET/COLLATE and the census does not capture collation_name. Selected d-collation: create this index with collation {locale: 'en', strength: 2} so lookups keep MySQL semantics, and apply collation_casefold in recon to this field only. NOT machine-expressible: the spec's index schema carries keys+unique only (model_patch._index, recon config._index_spec) and field rules cannot be added by a decision op; this note is the only carrier -> app/index-creation constraint handed to s4.1.b01 (see 05_decisions.md s3.2 entry 3)."
             }
           ],
           "unique": true
@@ -396,6 +412,10 @@
             {
               "kind": "decision",
               "ref": "access_pattern ap-57be51b5c5: the proposer skips cold patterns in _index_plan, so this index is added by decision per the ticket's index plan; not declared unique because the ticket's plan does not call for it and the source has no UNIQUE on provider_name"
+            },
+            {
+              "kind": "decision",
+              "ref": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql: MySQL 8 default collation utf8mb4_0900_ai_ci (case-insensitive): the DDL declares no CHARSET/COLLATE and the census does not capture collation_name. Selected d-collation: create this index with collation {locale: 'en', strength: 2} so lookups keep MySQL semantics, and apply collation_casefold in recon to this field only. NOT machine-expressible: the spec's index schema carries keys+unique only (model_patch._index, recon config._index_spec) and field rules cannot be added by a decision op; this note is the only carrier -> app/index-creation constraint handed to s4.1.b01 (see 05_decisions.md s3.2 entry 3)."
             }
           ]
         }
@@ -439,7 +459,7 @@
     }
   ],
   "canonicalization": {
-    "version": "map-draft-2-canon",
+    "version": "map-draft-3-canon",
     "rules": [
       {
         "rule": "decimal_round",
@@ -841,6 +861,103 @@
           "note": "UNT5-6 (s2.1-census) entry 1 and UNT5-8 (s2.3-dependency-register) X10 at .migration/05_decisions.md:468-469 (`git grep mmp_fixture_meta ... ':!.migration'` = 0 hits: referenced by nothing in the app)"
         },
         "cited": ".migration/05_decisions.md: UNT5-6 (s2.1-census) entry 1 and UNT5-8 (s2.3-dependency-register) X10 at .migration/05_decisions.md:468-469 (`git grep mmp_fixture_meta ... ':!.migration'` = 0 hits: referenced by nothing in the app)",
+        "status": "PROPOSED"
+      },
+      {
+        "op": "index",
+        "collection": "bankingCoreAccount",
+        "keys": [
+          [
+            "number",
+            1
+          ]
+        ],
+        "unique": true,
+        "id": "d-unique-stricter-account-number",
+        "evidence": {
+          "file": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql",
+          "lines": "14-25",
+          "quote": "`number` varchar(255) DEFAULT NULL, ... PRIMARY KEY (`id`), KEY `FKt5uqy9p0v3rp3yhlgvm7ep0ij`(`user_id`)",
+          "note": "known incompatibility: the fixture-independent DDL has no UNIQUE on banking_core_account.number (only the PK and the user_id KEY), so the target unique index is stricter than the source. Kept unique on purpose: BankAccountRepository.findByNumber (repository/BankAccountRepository.java:10) returns Optional<> and treats number as a key lookup. Load policy: a duplicate number in a real export must FAIL the createIndex/load visibly (surfaced in the ticket), never be deduplicated or hidden."
+        },
+        "cited": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql: known incompatibility: the fixture-independent DDL has no UNIQUE on banking_core_account.number (only the PK and the user_id KEY), so the target unique index is stricter than the source. Kept unique on purpose: BankAccountRepository.findByNumber (repository/BankAccountRepository.java:10) returns Optional<> and treats number as a key lookup. Load policy: a duplicate number in a real export must FAIL the createIndex/load visibly (surfaced in the ticket), never be deduplicated or hidden.",
+        "status": "PROPOSED"
+      },
+      {
+        "op": "index",
+        "collection": "bankingCoreUser",
+        "keys": [
+          [
+            "identificationNumber",
+            1
+          ]
+        ],
+        "unique": true,
+        "id": "d-unique-stricter-identification-number",
+        "evidence": {
+          "file": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql",
+          "lines": "3-10",
+          "quote": "`identification_number` varchar(255) DEFAULT NULL, ... PRIMARY KEY (`id`)",
+          "note": "known incompatibility: the fixture-independent DDL has no UNIQUE on banking_core_user.identification_number (PK only), so the target unique index is stricter than the source. Kept unique on purpose: UserRepository.findByIdentificationNumber (repository/UserRepository.java:10) returns Optional<> and treats it as a key lookup. Load policy: a duplicate identification_number in a real export must FAIL the createIndex/load visibly, never be deduplicated or hidden."
+        },
+        "cited": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql: known incompatibility: the fixture-independent DDL has no UNIQUE on banking_core_user.identification_number (PK only), so the target unique index is stricter than the source. Kept unique on purpose: UserRepository.findByIdentificationNumber (repository/UserRepository.java:10) returns Optional<> and treats it as a key lookup. Load policy: a duplicate identification_number in a real export must FAIL the createIndex/load visibly, never be deduplicated or hidden.",
+        "status": "PROPOSED"
+      },
+      {
+        "op": "index",
+        "collection": "bankingCoreAccount",
+        "keys": [
+          [
+            "number",
+            1
+          ]
+        ],
+        "id": "d-collation-account-number",
+        "evidence": {
+          "file": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql",
+          "lines": "18",
+          "quote": "`number` varchar(255) DEFAULT NULL,",
+          "note": "MySQL 8 default collation utf8mb4_0900_ai_ci (case-insensitive): the DDL declares no CHARSET/COLLATE and the census does not capture collation_name. Selected d-collation: create this index with collation {locale: 'en', strength: 2} so lookups keep MySQL semantics, and apply collation_casefold in recon to this field only. NOT machine-expressible: the spec's index schema carries keys+unique only (model_patch._index, recon config._index_spec) and field rules cannot be added by a decision op; this note is the only carrier -> app/index-creation constraint handed to s4.1.b01 (see 05_decisions.md s3.2 entry 3)."
+        },
+        "cited": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql: MySQL 8 default collation utf8mb4_0900_ai_ci (case-insensitive): the DDL declares no CHARSET/COLLATE and the census does not capture collation_name. Selected d-collation: create this index with collation {locale: 'en', strength: 2} so lookups keep MySQL semantics, and apply collation_casefold in recon to this field only. NOT machine-expressible: the spec's index schema carries keys+unique only (model_patch._index, recon config._index_spec) and field rules cannot be added by a decision op; this note is the only carrier -> app/index-creation constraint handed to s4.1.b01 (see 05_decisions.md s3.2 entry 3).",
+        "status": "PROPOSED"
+      },
+      {
+        "op": "index",
+        "collection": "bankingCoreUser",
+        "keys": [
+          [
+            "identificationNumber",
+            1
+          ]
+        ],
+        "id": "d-collation-identification-number",
+        "evidence": {
+          "file": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql",
+          "lines": "7",
+          "quote": "`identification_number` varchar(255) DEFAULT NULL,",
+          "note": "MySQL 8 default collation utf8mb4_0900_ai_ci (case-insensitive): the DDL declares no CHARSET/COLLATE and the census does not capture collation_name. Selected d-collation: create this index with collation {locale: 'en', strength: 2} so lookups keep MySQL semantics, and apply collation_casefold in recon to this field only. NOT machine-expressible: the spec's index schema carries keys+unique only (model_patch._index, recon config._index_spec) and field rules cannot be added by a decision op; this note is the only carrier -> app/index-creation constraint handed to s4.1.b01 (see 05_decisions.md s3.2 entry 3)."
+        },
+        "cited": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql: MySQL 8 default collation utf8mb4_0900_ai_ci (case-insensitive): the DDL declares no CHARSET/COLLATE and the census does not capture collation_name. Selected d-collation: create this index with collation {locale: 'en', strength: 2} so lookups keep MySQL semantics, and apply collation_casefold in recon to this field only. NOT machine-expressible: the spec's index schema carries keys+unique only (model_patch._index, recon config._index_spec) and field rules cannot be added by a decision op; this note is the only carrier -> app/index-creation constraint handed to s4.1.b01 (see 05_decisions.md s3.2 entry 3).",
+        "status": "PROPOSED"
+      },
+      {
+        "op": "index",
+        "collection": "bankingCoreUtilityAccount",
+        "keys": [
+          [
+            "providerName",
+            1
+          ]
+        ],
+        "id": "d-collation-provider-name",
+        "evidence": {
+          "file": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql",
+          "lines": "32",
+          "quote": "`provider_name` varchar(255) DEFAULT NULL,",
+          "note": "MySQL 8 default collation utf8mb4_0900_ai_ci (case-insensitive): the DDL declares no CHARSET/COLLATE and the census does not capture collation_name. Selected d-collation: create this index with collation {locale: 'en', strength: 2} so lookups keep MySQL semantics, and apply collation_casefold in recon to this field only. NOT machine-expressible: the spec's index schema carries keys+unique only (model_patch._index, recon config._index_spec) and field rules cannot be added by a decision op; this note is the only carrier -> app/index-creation constraint handed to s4.1.b01 (see 05_decisions.md s3.2 entry 3)."
+        },
+        "cited": "core-banking-service/src/main/resources/db/migration/V1.0.20210427174638__create_base_table_structure.sql: MySQL 8 default collation utf8mb4_0900_ai_ci (case-insensitive): the DDL declares no CHARSET/COLLATE and the census does not capture collation_name. Selected d-collation: create this index with collation {locale: 'en', strength: 2} so lookups keep MySQL semantics, and apply collation_casefold in recon to this field only. NOT machine-expressible: the spec's index schema carries keys+unique only (model_patch._index, recon config._index_spec) and field rules cannot be added by a decision op; this note is the only carrier -> app/index-creation constraint handed to s4.1.b01 (see 05_decisions.md s3.2 entry 3).",
         "status": "PROPOSED"
       }
     ],

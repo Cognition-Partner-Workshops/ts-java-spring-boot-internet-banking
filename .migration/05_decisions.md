@@ -690,3 +690,139 @@ what was done, evidence. Nothing here authorizes a write: write scope is `.migra
   `origin/mmp-rt/b1-mysql`). No source or target connection; Atlas untouched. Branch rebased onto `origin/mmp-rt/b1-mysql` (`1ac822e`)
   before the PR.
 - Evidence: this session's command log; PR body.
+
+## 2026-10-07 · s3.2-known-incompatibilities · (1) AUTO_INCREMENT ids and DECIMAL(19,2): already at the recommended default, nothing to patch
+
+- Tool said: census marks `identity: true` on all four in-scope `id` columns (`.migration/census.json:69,170,238,329`); the proposer
+  wrote `key_strategy: "auto-increment identity: keep numeric _id on load, application generates ids after cutover"` and mapped
+  `actual_balance`, `available_balance`, `amount` (`census.json:73,83,242`, type `DECIMAL`) to `bson_type: decimal` with the
+  type-wide `decimal_round` rule. `model_patch.py` has no op that changes a key representation or a scalar type (`OPS = {embed,
+  reference, date_format, set_key, pattern, rename, resolve, index}`), and none is needed.
+- Did: d-key-strategy (numeric AUTO_INCREMENT value stays `_id`) and d-decimal (Decimal128) implemented as selected; no decision op,
+  no spec change for these two rows. DDL confirms: `bigint(20) NOT NULL AUTO_INCREMENT` on `banking_core_user:4`,
+  `banking_core_account:15`, `banking_core_utility_account:30` (`V1.0.20210427174638__create_base_table_structure.sql`) and
+  `banking_core_transaction:4` (`V1.0.20210429210839__create_transaction_table.sql`); `decimal(19, 2)` at `:16-17` and
+  `create_transaction_table.sql:5`; entities use `GenerationType.IDENTITY` and `BigDecimal` (`BankAccountEntity.java:19,30,32`,
+  `TransactionEntity.java:20,23`). Reminder carried from s3.1 entry (5)(a): `_id` must stay <= 2^31-1 after cutover (user-service
+  `UserResponse.id` is `Integer`); post-cutover id generation (counters collection) is out of scope for this run.
+- Evidence: files cited above; `.migration/mapping_spec.json` `collections[*].decision.key_strategy`, `fields[].bson_type`.
+
+## 2026-10-07 · s3.2-known-incompatibilities · (2) target unique indexes on `number` / `identificationNumber` are stricter than the source: recorded as index decisions 11-12
+
+- Tool said: nothing. The proposer declared both indexes `unique` from the `Optional<>` finders (s3.1 entry 3) and the census has no
+  `unique_constraint` finding for either column; the spec cannot distinguish "unique in source" from "unique by decision".
+- Observed (fixture-independent DDL): `banking_core_account` declares only `PRIMARY KEY (id)` and `KEY FK...(user_id)`
+  (`create_base_table_structure.sql:22-24`); `banking_core_user` declares only `PRIMARY KEY (id)` (`:9`). No `UNIQUE` anywhere in
+  the three Flyway files (`git grep -i UNIQUE -- core-banking-service/src/main/resources/db/migration` = 0). So MySQL accepts
+  duplicate `number` / `identification_number` rows that the target will reject.
+- Did: kept both indexes unique, as the manager directed: `findByNumber` (`BankAccountRepository.java:10`) and
+  `findByIdentificationNumber` (`UserRepository.java:10`) are lookups by key and return `Optional<>`, so a duplicate would already
+  be an application fault. Recorded as `index` decisions `d-unique-stricter-account-number` and
+  `d-unique-stricter-identification-number` (`.migration/design_decisions.json` entries 11-12) citing the DDL lines; the evidence
+  text is appended to the two index entries in map-draft-3. **Load policy for s4.1 / unit-migration:** a duplicate on a real export
+  must FAIL the `createIndex`/load and be surfaced in the ticket; never deduplicate, drop the `unique`, or hide it. Human review
+  substituted (unattended): the "keep unique" call was taken by the manager in the ticket text; the worker verified the DDL.
+- Evidence: `.migration/design_decisions.json` entries 11-12; `.migration/mapping_spec.json` `bankingCoreAccount.indexes[0].evidence`,
+  `bankingCoreUser.indexes[0].evidence`.
+
+## 2026-10-07 · s3.2-known-incompatibilities · (3) d-collation cannot be expressed by the spec schema: recorded as annotated index decisions 13-15 and handed to s4.1.b01
+
+- Tool said: `skills/schema-modeling/SKILL.md` lists no collation or canonicalization op; `model_patch.py` `_index` reads only
+  `collection`, `keys`, `unique` (any other key, e.g. `collation`, is silently ignored for the index entry and only echoed into
+  `modeling.decisions`); the recon harness `config._index_spec` likewise builds `IndexSpec(keys, unique)` and would drop a collation
+  field. The spec's `canonicalization.rules` are type-wide (`applies_to: decimal|date|string|*|...`) and no decision op adds a
+  per-field rule; `collation_casefold` is implemented in the harness (`harness/recon/canon.py:74,177`) and listed in the MySQL profile
+  (`profiles/mysql.md:45,193`, `enabled_if: "*_ci collation on compared columns"`) but the proposer did not emit it (10 rules in
+  `canonicalization.rules`, none is `collation_casefold`). Census blind spot: the catalog columns query does not select
+  `collation_name` / `character_set_name`, so the census carries no collation at all (plugin finding).
+- Observed: the DDL declares no `CHARSET`/`COLLATE` on any table or column (`git grep -i "COLLATE\|CHARSET" -- . ':!.migration'`
+  = 0 relevant hits); the source image is `mysql:8.4.0` with no `my.cnf` override (`docker-compose/mysql/Dockerfile:1`), so every
+  VARCHAR takes the MySQL 8 server default `utf8mb4_0900_ai_ci` (case- and accent-insensitive). Not verified live in this ticket
+  (files only, no fixture).
+- Did: did **not** hand-edit the spec. Recorded d-collation as three `index` decisions `d-collation-account-number`,
+  `d-collation-identification-number`, `d-collation-provider-name` (`design_decisions.json` entries 13-15) whose evidence note is the
+  constraint; `model_patch.py` appends it to the three index entries in map-draft-3 (`unique` untouched: the op leaves it as-is when
+  the key is absent). The index entries themselves still carry no machine-readable collation. **Handed to s4.1.b01 as an app /
+  index-creation constraint:** (a) create `bankingCoreAccount{number:1}` (unique), `bankingCoreUser{identificationNumber:1}`
+  (unique) and `bankingCoreUtilityAccount{providerName:1}` with `collation: {locale: "en", strength: 2}`; (b) the Spring Data
+  queries `findByNumber`, `findByIdentificationNumber`, `findByProviderName` must run with the same collation (query collation or
+  collection default collation — s4.1.b01 chooses, the index is only used when the collations match); (c) recon: declare a
+  `collation_casefold` alias in the profile rules file and attach it to exactly those three fields' `rules` in the recon run
+  configuration — every other string field compares exactly (`rstrip_spaces` + `null_missing_equiv` only). Plugin findings:
+  `index` op needs a `collation` field carried through `_index_spec`; a `canon_rule` op (collection, field, rule) is needed to put a
+  per-field rule in the spec; the catalog census should capture `collation_name`.
+- Evidence: `.migration/design_decisions.json` entries 13-15; `.migration/mapping_spec.json` `bankingCoreAccount.indexes[0]`,
+  `bankingCoreUser.indexes[0]`, `bankingCoreUtilityAccount.indexes[0]` evidence, `canonicalization.rules`; plugin files cited above.
+
+## 2026-10-07 · s3.2-known-incompatibilities · (4) `datetime`/`timestamp` and `ON UPDATE CURRENT_TIMESTAMP`: not applicable to the four in-scope tables
+
+- Tool said: `catalog_census.py` emits an `on_update_clause` finding from the column `extra`; `census.findings` holds only
+  `no_primary_key / mmp_fixture_meta` and no column has an `on_update` key. The only temporal column in the catalog is
+  `mmp_fixture_meta.initialized_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP` (`census.json:370-375`), on the excluded fixture table.
+- Did: no `$currentDate` decision — the four in-scope tables have no `DATE`/`DATETIME`/`TIMESTAMP` column (DDL files above;
+  `git grep "ON UPDATE CURRENT_TIMESTAMP" -- . ':!.migration'` = 0). The `time_zone='+00:00'` pin stays run-wide
+  (`.migration/fixtures/w1-b01.json` `server.time_zone_pin`) but affects no in-scope value; the type-wide `datetime_utc_truncate_ms`
+  rule in the spec has no in-scope field to apply to. s3.1 entry (3) already notes the transaction table has no timestamp column,
+  hence no range index.
+- Evidence: `.migration/census.json` `findings`, `tables.*.columns`; DDL files cited in entry (1).
+
+## 2026-10-07 · s3.2-known-incompatibilities · (5) `''` vs NULL: exact parity kept, no `empty_string_is_null` rule
+
+- Tool said: `canonicalization.rules` in map-draft-3 = `decimal_round, datetime_utc_truncate_ms, rstrip_spaces, null_missing_equiv,
+  yn_to_bool, int_to_bool, csv_to_array, date_string_to_date, json_parse, bits_to_int` — no `empty_string_is_null` (profile
+  default, `profiles/mysql.md:44`). `null_missing_equiv` (`applies_to: *`) equates SQL NULL with an absent document field only;
+  `''` stays a distinct value on both sides.
+- Did: nothing to add — exact parity was chosen (tolerances `.migration/recon_tolerances.json`). Nullable VARCHARs are
+  `DEFAULT NULL` on user/account/utility (`create_base_table_structure.sql:5-8,18-20,31-32`); the transaction VARCHARs are
+  `NOT NULL` (`create_transaction_table.sql:6-8`). The seed writes no empty strings (`V1.0.20210427174721__temp_data.sql`), so the
+  fixture cannot exercise the distinction; recon compares `''` and NULL as different values and would flag any loader that
+  coalesces them.
+- Evidence: `.migration/mapping_spec.json` `canonicalization.rules`; DDL lines cited.
+
+## 2026-10-07 · s3.2-known-incompatibilities · (6) VARCHAR enums `status`, `type`, `transaction_type`: plain strings, no `polymorphic` pattern
+
+- Tool said: fields emitted as `bson_type: string` with no domain; no `polymorphic` candidate raised (correct: there are no subtype
+  columns — `banking_core_account` has 7 columns, `banking_core_transaction` 6, none type-specific; `census.json`).
+- Did: kept as strings; no decision op (none carries a value domain — s3.1 entry 4 plugin finding stands). Domains, for recon /
+  s4.1: JPA stores the enum **name** (`@Enumerated(EnumType.STRING)` `BankAccountEntity.java:24-28`, `TransactionEntity.java:25-26`);
+  `AccountStatus {PENDING, ACTIVE, DORMANT, BLOCKED}`, `AccountType {SAVINGS_ACCOUNT, FIXED_DEPOSIT, LOAN_ACCOUNT}`,
+  `TransactionType {FUND_TRANSFER, UTILITY_PAYMENT}`. Measured (`.migration/data_profile.supplement.json`): `status {ACTIVE: 14}`,
+  `type {SAVINGS_ACCOUNT: 14}`, `transaction_type {}` — the fixture has 0 transaction rows, so the `transaction_type` domain (and
+  the `varchar(30) NOT NULL` width) is **unverified by data** in this run; the Java enum is the only source of the domain and
+  fixture recon cannot exercise it. Case matters: enum names are upper-case constants, compared exactly (no casefold — d-collation
+  covers only the three looked-up columns).
+- Evidence: Java files cited; `.migration/data_profile.supplement.json`; `.migration/census.json` `tables.banking_core_account`,
+  `tables.banking_core_transaction`.
+
+## 2026-10-07 · s3.2-known-incompatibilities · (7) not expected and confirmed absent: zero dates, unsigned BIGINT, routines/triggers/events, GROUP_CONCAT, ON DUPLICATE KEY
+
+- Zero dates: no `DATE`/`DATETIME`/`TIMESTAMP` column in scope (entry 4); `git grep "0000-00-00" -- . ':!.migration'` = 0.
+- Unsigned BIGINT: every `bigint(20)` in the DDL is signed (no `UNSIGNED` token; `git grep -i UNSIGNED -- . ':!.migration'` = 0);
+  no census column carries `unsigned: true` (`ddl_census.py`/`catalog_census.py` would set it).
+- Routines / triggers / events / views: census inputs `routines`, `triggers`, `events`, `views` each returned 0 rows
+  (`census.json:32-50`, `triggers: []` at `:421`); `git grep -i "CREATE TRIGGER\|CREATE PROCEDURE\|CREATE FUNCTION\|CREATE EVENT"`
+  = 0. Nothing to disposition per object.
+- GROUP_CONCAT / INSERT ... ON DUPLICATE KEY UPDATE: `git grep -i "GROUP_CONCAT\|ON DUPLICATE" -- . ':!.migration'` = 0; core-banking
+  has no `@Query`/`nativeQuery` at all — only JPA derived finders (`repository/*.java`), so no raw SQL to convert.
+- Implicit string/number coercion (profile row): only in the seed, which inserts unquoted numerals into VARCHAR `number`
+  (`temp_data.sql:12`) and quoted `'1'` into BIGINT `user_id` — MySQL stores them as `'100015003000'` / `1`; the application passes
+  typed `String`/`Long` parameters (`findByNumber(String)`), so no comparison relies on coercion. No decision needed.
+- Evidence: commands above (run from `$HOME` with `git -C <abs repo>`); `.migration/census.json`; DDL files.
+
+## 2026-10-07 · s3.2-known-incompatibilities · (8) run mechanics: decisions replayed from a fresh map-draft-1 → map-draft-3; `--check` exit 0; nothing else to correct
+
+- Tool said: `model_patch.py` appends `evidence` to an existing index on every replay and `resolve` fails on an empty `unresolved`
+  list, so the decisions must be replayed on the proposer's output, not on the committed map-draft-2. Replay check before touching
+  anything: `model_proposal.py --census --data-profile --access-patterns --version map-draft-1 --out $HOME/mmp-s32/map-draft-1.json`
+  (exit 0, `collections=5 embeds=0 unresolved=1`) then `model_patch.py --spec map-draft-1.json --decisions <repo>/.migration/
+  design_decisions.json --out $HOME/mmp-s32/map-draft-2.json --version map-draft-2 --workspace <abs repo> --data-profile --census
+  --access-patterns` → `cmp` with the committed `mapping_spec.json`: **byte-identical** (the s3.1 artefact is reproducible).
+- Did: appended decisions 11-15 to `design_decisions.json` (list of 15), re-ran the same proposal + patch pair with `--version
+  map-draft-3 --out <repo>/.migration/mapping_spec.json` → exit 0 `collections=5 embeds=0 (derived=0) unresolved=0 decisions=15`;
+  `model_patch.py --spec <repo>/.migration/mapping_spec.json --check --census --data-profile --access-patterns --workspace <abs repo>`
+  → exit 0, no stdout (no `g-model-evidence:` finding). Spec changed (version, `canonicalization.version`, 5 new index evidence
+  rows, 5 `modeling.decisions`), hence map-draft-3; collections, keys, fields, `bson_type`s, rules and `mmpFixtureMeta` (still
+  listed, resolved `excluded`, per manager note) are unchanged. All commands run from `$HOME` with absolute paths (dbx guard).
+  No source connection, no fixture, no Atlas; census / profile / supplement / access files untouched. Branch rebased onto
+  `origin/mmp-rt/b1-mysql` (`6ffa861`) before the PR.
+- Evidence: this session's command log; PR body.
