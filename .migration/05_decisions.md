@@ -421,3 +421,97 @@ what was done, evidence. Nothing here authorizes a write: write scope is `.migra
 - `mmp_fixture_meta` (in the census, UNT5-6 entry 1): fixture scaffolding, referenced by no application code — no access pattern,
   out of scope; the dry-run proposal still emits a `mmpFixtureMeta` collection that the model step must drop.
 - Evidence: `.migration/access_patterns.json`; cited lines; dry-run transcript in the PR body.
+
+## 2026-10-07 · s2.3-dependency-register · (1) no plugin tool covers this step; register built from `git grep` on `origin/mmp-rt/b1-mysql` (45db86e)
+
+- Tool said: `migration-planning/SKILL.md` line 56 / 212-215 define `s2.3-dependency-register` as "other writers / readers / scheduled
+  logic / missing access found and dispositioned; lands as step text + discussion entries, not a file". mongo-migration 0.7.0 ships no
+  script for it (`catalog_census.py` sees only the database; `census.json` cannot see the app). The intake's claim ("fund-transfer /
+  utility-payment call core-banking via OpenFeign over HTTP, do not touch the tables") was taken as a hypothesis to verify, not as fact.
+- Did: read the code of every module at `origin/mmp-rt/b1-mysql` (`45db86e`; identical to `origin/main` `957765d` for all service code —
+  `git diff --stat origin/main origin/mmp-rt/b1-mysql -- . ':!.migration'` = `.devin/blueprint.yaml`, `.devin/mmp-postsetup.sh`,
+  `.gitignore` only) plus the external Spring Cloud Config repo the services read at runtime
+  (`internet-banking-config-server/src/main/resources/application.yml:8-10` -> `JavatoDev-com/internet-banking-microservices-configurations`,
+  path `configuration/`, label `main`, fetched read-only over HTTPS). Register (W = writer, R = reader, disposition in brackets):
+  - W1 `core-banking-service` — the only JPA owner of the 4 tables: `@Table` `banking_core_user` `UserEntity.java:12`, `banking_core_account`
+    `BankAccountEntity.java:15`, `banking_core_utility_account` `UtilityAccountEntity.java:15`, `banking_core_transaction` `TransactionEntity.java:16`;
+    repositories `repository/{User,BankAccount,UtilityAccount,Transaction}Repository.java` (derived queries only: `findByIdentificationNumber`
+    `UserRepository.java:10`, `findByNumber` `BankAccountRepository.java:10`, `findByProviderName` `UtilityAccountRepository.java:10`; no `@Query`,
+    `nativeQuery`, `EntityManager` or `JdbcTemplate` anywhere in the repo). Writes happen only in `TransactionService.java:92,94,101,103`
+    (fund transfer) and `:59-70` (utility payment), under class-level `@Transactional` (`:27`). Datasource `jdbc:mysql://…/banking_core_service`
+    (config repo `core-banking-service.yml:3`, `-docker.yml:3`), `ddl-auto: none` (`:8`). [in scope]
+  - W2 Flyway — schema + seed writer, 3 files under `core-banking-service/src/main/resources/db/migration/` (`V1.0.20210427174638__create_base_table_structure.sql`
+    34 lines, `V1.0.20210427174721__temp_data.sql` 39 lines, `V1.0.20210429210839__create_transaction_table.sql` 13 lines); no `CREATE EVENT|TRIGGER|PROCEDURE|FUNCTION`
+    in any of them (grep = 0 hits), matching the live census (`census.json` `inputs` routines/triggers/events/views = 0 rows). [in scope — schema authority for s3.1]
+  - R/W3 `internet-banking-fund-transfer-service` — has JPA + MySQL driver (`build.gradle:30,47`) but its only entity is `fund_transfer`
+    (`FundTransferEntity.java:15`) in its own database `banking_core_fund_transfer_service` (config repo `internet-banking-fund-transfer-service.yml:6`,
+    `ddl-auto: update` `:11`; `docker-compose/mysql/privileges.sql:6`; `src/test/resources/application.yml:5`). `git grep -i banking_core` over the module
+    = only the H2 test URL. Reaches core-banking through OpenFeign `BankingCoreFeignClient.java:14` (`value = "core-banking-service"`, Eureka id), methods
+    `readAccount` `:17-18` and `fundTransfer` `:20-21`; only `fundTransfer` is invoked (`FundTransferService.java:39`). [out of scope for data; HTTP contract in scope]
+  - R/W4 `internet-banking-utility-payment-service` — same pattern: entity `utility_payment` (`UtilityPaymentEntity.java:15`), database
+    `banking_core_utility_payment_service` (config `internet-banking-utility-payment-service.yml:6`, `privileges.sql:8`); Feign `BankingCoreRestClient.java:14`,
+    `readAccount` `:17-18` (never invoked), `utilityPayment` `:20-21` (invoked `UtilityPaymentService.java:39`). Zero `banking_core_*` references. [out of scope; contract in scope]
+  - R5 `internet-banking-user-service` — does **not** share the schema: entity `user` (`UserEntity.java:13`) in `banking_core_user_service`
+    (config `internet-banking-user-service.yml:3`, `privileges.sql:7`, test `application.yml:5`); identities live in Keycloak (`UserService.java:35,61,84`).
+    Reads core-banking only via Feign `BankingCoreRestClient.java:9-13` `GET /api/v1/user/{identification}` (`UserService.java:40`). [out of scope; contract in scope]
+  - R6 `internet-banking-api-gateway` — data-agnostic: route `id: core-banking-service`, `uri: lb://core-banking-service`, `Path=/banking-core/**`,
+    `StripPrefix=1` (config repo `internet-banking-api-gateway.yml:28-33`); `SecurityConfiguration.java:30` permits `/banking-core/actuator/**`.
+    The Eureka service id (`core-banking-service/src/main/resources/application.yml:3`) and the `/api/v1/*` paths are what must not move. [out of scope]
+  - S7 scheduled logic — none: `@Scheduled|@EnableScheduling|cron|quartz|TaskScheduler` = 0 hits repo-wide; no Kafka/Rabbit/`@EventListener`/
+    `RestTemplate`/`WebClient` in core-banking (it calls nothing outbound); no MySQL events/triggers/routines (W2 + census). [in scope — nothing to migrate]
+  - X8 shared MySQL server and over-broad DB principal — in the compose estate all 4 databases sit on one server (`privileges.sql:5-8`,
+    `mysql_core_db` in every `*-docker.yml`) and the app user `javatodev_development` holds `CREATE, ALTER, DROP, INSERT, UPDATE, DELETE, SELECT, REFERENCES on *.*`
+    (`privileges.sql:1-2`), so every service *could* reach `banking_core_service` by privilege; no code path does. [out of scope for the move; **needs access**:
+    only the customer's real MySQL grants/process list can prove no out-of-repo writer — the repo holds only the dev compose]
+  - X9 manual/external consumers — `postman_collection/JAVA_TO_DEV_MICROSERVICES.postman_collection.json:82,103,123,145,176,197` hit the core endpoints directly
+    through the gateway under prefix `/core/…` (stale: the gateway route is `/banking-core/**`; `.devin/blueprint.yaml:116` uses the live prefix). [out of scope; informational]
+  - X10 `mmp_fixture_meta` — `git grep mmp_fixture_meta origin/mmp-rt/b1-mysql -- . ':!.migration'` = 0 hits: referenced by nothing in the app; fixture
+    scaffolding only, as UNT5-6 entry (1) dispositioned. [out of scope]
+  - X11 developer-process writer — `.agents/skills/banking-feature-sdlc/SKILL.md:68-72` instructs future features to add Flyway migrations against
+    `banking_core_transaction`; stale once the backend is swapped. [out of scope for data; hand to s3.2 / cutover notes]
+- Evidence: file:line cites above, all on `origin/mmp-rt/b1-mysql` (`45db86e`); config-repo cites are line numbers of the raw files fetched from
+  `JavatoDev-com/internet-banking-microservices-configurations@main/configuration/`.
+
+## 2026-10-07 · s2.3-dependency-register · (2) HTTP contracts that must survive the backend swap (constraints handed to s3.1 / s3.2)
+
+- Observed (core-banking controllers; every handler returns `ResponseEntity.ok(<dto>)`):
+  - `GET /api/v1/user/{identification}` `UserController.java:29-31` -> `User` {`id` Long, `firstName`, `lastName`, `email`, `identificationNumber`,
+    `bankAccounts`: [`BankAccount` {`id` Long, `number` String, `type`/`status` enum-as-string (`@Enumerated(EnumType.STRING)` `BankAccountEntity.java:24-28`),
+    `availableBalance`, `actualBalance` BigDecimal}]} (`User.java:10-15`, `BankAccount.java:13-19`; `UserMapper.java:25-26` embeds the accounts,
+    `BankAccountMapper.java:23` strips `user`, so the nesting is one level). Consumer: user-service `UserResponse.java:11-16` reads `id`, `email`,
+    `firstName`, `lastName`, `identificationNumber` (`UserService.java:42-69`) and types `id` as **Integer** (`UserResponse.java:15`,
+    `AccountResponse.java:13`) -> ids must stay numeric and within int range; a string/ObjectId `id` or an id > 2^31-1 breaks the only live consumer.
+  - `GET /api/v1/user?page=&size=&sort=` `UserController.java:35-37` -> `List<User>` (page *content* only, `UserService.java:29-31`); `sort` names
+    entity properties. Consumers: none in code (postman / blueprint smoke test).
+  - `GET /api/v1/account/bank-account/{account_number}` `AccountController.java:26-30` -> `BankAccount` without `user`. Declared by both Feign clients
+    (`BankingCoreFeignClient.java:17-18`, utility `BankingCoreRestClient.java:17-18`) but never called; their `AccountResponse.number` is `Long`
+    (`fund-transfer …/response/AccountResponse.java:9`, utility `…/response/AccountResponse.java:9`) against the server's String — latent, unexercised.
+  - `GET /api/v1/account/util-account/{account_name}` `AccountController.java:33-37` -> `UtilityAccount` {`id`, `number`, `providerName`} (`UtilityAccount.java:7-9`).
+  - `POST /api/v1/transaction/fund-transfer` `TransactionController.java:28-33`, body `FundTransferRequest` {`fromAccount`, `toAccount`, `amount`}
+    (`FundTransferRequest.java:13-15`) -> `FundTransferResponse` {`message`, `transactionId`} (`FundTransferResponse.java:12-13`); consumer reads
+    `transactionId` (`FundTransferService.java:39-40`). Server semantics: 2 account updates + 2 `banking_core_transaction` rows sharing one
+    `transactionId` UUID, atomically (`TransactionService.java:27,83-110`).
+  - `POST /api/v1/transaction/util-payment` `TransactionController.java:37-42`, body `UtilityPaymentRequest` {`providerId` Long, `amount`,
+    `referenceNumber`, `account`} (`UtilityPaymentRequest.java:10-13`) -> `UtilityPaymentResponse` {`message`, `transactionId`}; consumer reads
+    `transactionId` (`UtilityPaymentService.java:39-46`). Semantics: 1 account update + 1 transaction row (`TransactionService.java:50-70`).
+  - Error contract: every exception -> HTTP **400** with `ErrorResponse` {`code`, `message`} (`GlobalExceptionHandler.java:13-27`), codes
+    `BANKING-CORE-SERVICE-1000` (not found) / `-1001` (insufficient funds) (`GlobalErrorCode.java:4-5`). user-service's "found" test is
+    `userResponse.getId() != null` (`UserService.java:42`) — reachable only because Feign throws on 400; the 400 (not 404) must stay.
+- Did: no code change (code-only ticket). Recorded three constraints the model step must honour rather than discover: (a) preserve numeric MySQL
+  ids as the document `_id`/`id` for user, account, utility_account, transaction; (b) fund transfer touches two account documents and two
+  transaction documents — either embed transactions under account **and** run the swap in a multi-document transaction, or keep a separate
+  `transaction` collection with a session; (c) reproduce, do not fix, the existing balance arithmetic — `availableBalance` is set from the
+  already-updated `actualBalance` minus/plus the amount (`TransactionService.java:63-64,90-91,99-100`), i.e. it drifts from `actualBalance` by one
+  extra `amount` per movement; field-level parity against the fixture must match that, and a "fix" would be a legacy-behaviour change (rule 1).
+  Also noted for s3.1: `TransactionEntity.account` is `@OneToOne(cascade = ALL)` (`TransactionEntity.java:32-34`) over a DDL FK that is
+  many-to-one with a non-unique index (census `indexes`), so the JPA annotation under-states cardinality — model from the DDL/census, not the annotation.
+- Evidence: cites above; UNT5-6 census (`.migration/census.json`) for the FK/index facts.
+
+## 2026-10-07 · s2.3-dependency-register · (3) worker-VM friction: none this ticket
+
+- Observed: code-only step — no fixture rebuilt, no Atlas connection, no harness run, so none of the s1.4/s1.2/s2.1 friction applied. Every
+  command ran from `$HOME` with `git -C <repo>` / absolute paths; no shell was blocked by the dbx-migration-factory guard. Plugin clone
+  (`mongo-migration-plugin`, 0.7.0) was read only for the step definition.
+- Did: nothing to correct. Entries (1)-(2) are the register the ticket asks for; the step's `discussion` text is the same register, posted on
+  the ticket for the manager to carry into the plan.
+- Evidence: this session's command log; UNT5-8 ticket final message.
