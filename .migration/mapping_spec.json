@@ -1,0 +1,857 @@
+{
+  "version": "map-draft-2",
+  "source_family": "mysql",
+  "collections": [
+    {
+      "collection": "bankingCoreAccount",
+      "root_table": "banking_core_account",
+      "key": {
+        "source": [
+          "id"
+        ],
+        "target": "_id"
+      },
+      "fields": [
+        {
+          "source": "actual_balance",
+          "target": "actualBalance",
+          "source_type": "DECIMAL(19,2)",
+          "bson_type": "decimal",
+          "rules": [
+            "decimal_round",
+            "null_missing_equiv"
+          ]
+        },
+        {
+          "source": "available_balance",
+          "target": "availableBalance",
+          "source_type": "DECIMAL(19,2)",
+          "bson_type": "decimal",
+          "rules": [
+            "decimal_round",
+            "null_missing_equiv"
+          ]
+        },
+        {
+          "source": "number",
+          "target": "number",
+          "source_type": "VARCHAR(255)",
+          "bson_type": "string",
+          "rules": [
+            "null_missing_equiv"
+          ]
+        },
+        {
+          "source": "status",
+          "target": "status",
+          "source_type": "VARCHAR(255)",
+          "bson_type": "string",
+          "rules": [
+            "null_missing_equiv"
+          ]
+        },
+        {
+          "source": "type",
+          "target": "type",
+          "source_type": "VARCHAR(255)",
+          "bson_type": "string",
+          "rules": [
+            "null_missing_equiv"
+          ]
+        },
+        {
+          "source": "user_id",
+          "target": "userId",
+          "source_type": "BIGINT",
+          "bson_type": "long",
+          "rules": [
+            "null_missing_equiv"
+          ]
+        }
+      ],
+      "embeds": [],
+      "decision": {
+        "shape": "collection",
+        "key_strategy": "auto-increment identity: keep numeric _id on load, application generates ids after cutover",
+        "key_fields": [
+          {
+            "source": "id",
+            "target": "id",
+            "source_type": "BIGINT",
+            "bson_type": "long",
+            "rules": []
+          }
+        ],
+        "natural_keys": [],
+        "references": [
+          {
+            "column": [
+              "user_id"
+            ],
+            "to": "bankingCoreUser",
+            "to_columns": [
+              "id"
+            ],
+            "why": "child owns its own lifecycle"
+          }
+        ],
+        "open_questions": []
+      },
+      "indexes": [
+        {
+          "keys": [
+            [
+              "number",
+              1
+            ]
+          ],
+          "origin": "access",
+          "evidence": [
+            {
+              "kind": "access_pattern",
+              "ref": "ap-c0f0ff167d"
+            },
+            {
+              "kind": "decision",
+              "ref": "access_pattern ap-c0f0ff167d: hot lookup by account number returns Optional (at most one row); the source DDL has no UNIQUE on number, the fixture's 14 numbers are distinct, the target index is declared unique per the ticket's index plan"
+            }
+          ],
+          "unique": true
+        },
+        {
+          "keys": [
+            [
+              "userId",
+              1
+            ]
+          ],
+          "origin": "reference",
+          "evidence": [
+            {
+              "kind": "access_pattern",
+              "ref": "ap-959128234d"
+            },
+            {
+              "kind": "access_pattern",
+              "ref": "ap-dfe8974af9"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "collection": "bankingCoreUser",
+      "root_table": "banking_core_user",
+      "key": {
+        "source": [
+          "id"
+        ],
+        "target": "_id"
+      },
+      "fields": [
+        {
+          "source": "email",
+          "target": "email",
+          "source_type": "VARCHAR(255)",
+          "bson_type": "string",
+          "rules": [
+            "null_missing_equiv"
+          ]
+        },
+        {
+          "source": "first_name",
+          "target": "firstName",
+          "source_type": "VARCHAR(255)",
+          "bson_type": "string",
+          "rules": [
+            "null_missing_equiv"
+          ]
+        },
+        {
+          "source": "identification_number",
+          "target": "identificationNumber",
+          "source_type": "VARCHAR(255)",
+          "bson_type": "string",
+          "rules": [
+            "null_missing_equiv"
+          ]
+        },
+        {
+          "source": "last_name",
+          "target": "lastName",
+          "source_type": "VARCHAR(255)",
+          "bson_type": "string",
+          "rules": [
+            "null_missing_equiv"
+          ]
+        }
+      ],
+      "embeds": [],
+      "decision": {
+        "shape": "collection",
+        "key_strategy": "auto-increment identity: keep numeric _id on load, application generates ids after cutover",
+        "key_fields": [
+          {
+            "source": "id",
+            "target": "id",
+            "source_type": "BIGINT",
+            "bson_type": "long",
+            "rules": []
+          }
+        ],
+        "natural_keys": [],
+        "references": [],
+        "open_questions": []
+      },
+      "indexes": [
+        {
+          "keys": [
+            [
+              "identificationNumber",
+              1
+            ]
+          ],
+          "origin": "access",
+          "evidence": [
+            {
+              "kind": "access_pattern",
+              "ref": "ap-caf6a913b3"
+            },
+            {
+              "kind": "decision",
+              "ref": "access_pattern ap-caf6a913b3: warm lookup by identification number returns Optional (at most one row); the source DDL has no UNIQUE on identification_number, the fixture's 4 values are distinct, the target index is declared unique per the ticket's index plan"
+            }
+          ],
+          "unique": true
+        }
+      ]
+    },
+    {
+      "collection": "bankingCoreTransaction",
+      "root_table": "banking_core_transaction",
+      "key": {
+        "source": [
+          "id"
+        ],
+        "target": "_id"
+      },
+      "fields": [
+        {
+          "source": "amount",
+          "target": "amount",
+          "source_type": "DECIMAL(19,2)",
+          "bson_type": "decimal",
+          "rules": [
+            "decimal_round",
+            "null_missing_equiv"
+          ]
+        },
+        {
+          "source": "transaction_type",
+          "target": "transactionType",
+          "source_type": "VARCHAR(30)",
+          "bson_type": "string",
+          "rules": []
+        },
+        {
+          "source": "reference_number",
+          "target": "referenceNumber",
+          "source_type": "VARCHAR(50)",
+          "bson_type": "string",
+          "rules": []
+        },
+        {
+          "source": "transaction_id",
+          "target": "transactionId",
+          "source_type": "VARCHAR(50)",
+          "bson_type": "string",
+          "rules": []
+        },
+        {
+          "source": "account_id",
+          "target": "accountId",
+          "source_type": "BIGINT",
+          "bson_type": "long",
+          "rules": [
+            "null_missing_equiv"
+          ]
+        }
+      ],
+      "embeds": [],
+      "decision": {
+        "shape": "collection",
+        "key_strategy": "auto-increment identity: keep numeric _id on load, application generates ids after cutover",
+        "key_fields": [
+          {
+            "source": "id",
+            "target": "id",
+            "source_type": "BIGINT",
+            "bson_type": "long",
+            "rules": []
+          }
+        ],
+        "natural_keys": [],
+        "references": [
+          {
+            "column": [
+              "account_id"
+            ],
+            "to": "bankingCoreAccount",
+            "to_columns": [
+              "id"
+            ],
+            "why": "child owns its own lifecycle"
+          }
+        ],
+        "open_questions": []
+      },
+      "indexes": [
+        {
+          "keys": [
+            [
+              "accountId",
+              1
+            ]
+          ],
+          "origin": "reference",
+          "evidence": [
+            {
+              "kind": "access_pattern",
+              "ref": "ap-9925ea846a"
+            },
+            {
+              "kind": "decision",
+              "ref": "access_pattern ap-9925ea846a: reference-side index on the account FK, kept from the proposer's origin=reference entry and backed by the non-unique source KEY; production reads transactions by account and date range"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "collection": "bankingCoreUtilityAccount",
+      "root_table": "banking_core_utility_account",
+      "key": {
+        "source": [
+          "id"
+        ],
+        "target": "_id"
+      },
+      "fields": [
+        {
+          "source": "number",
+          "target": "number",
+          "source_type": "VARCHAR(255)",
+          "bson_type": "string",
+          "rules": [
+            "null_missing_equiv"
+          ]
+        },
+        {
+          "source": "provider_name",
+          "target": "providerName",
+          "source_type": "VARCHAR(255)",
+          "bson_type": "string",
+          "rules": [
+            "null_missing_equiv"
+          ]
+        }
+      ],
+      "embeds": [],
+      "decision": {
+        "shape": "collection",
+        "key_strategy": "auto-increment identity: keep numeric _id on load, application generates ids after cutover",
+        "key_fields": [
+          {
+            "source": "id",
+            "target": "id",
+            "source_type": "BIGINT",
+            "bson_type": "long",
+            "rules": []
+          }
+        ],
+        "natural_keys": [],
+        "references": [],
+        "open_questions": [],
+        "patterns": [
+          {
+            "pattern": "reference_data",
+            "detail": "reference_data",
+            "evidence": ".migration/access_patterns.json: reference_data_candidate disposition: banking_core_utility_account is a seed-only provider directory (6 rows, no FK in or out, read by id and by provider_name, never written by the application); labelled reference_data, kept as its own collection with numeric _id so UtilityPaymentRequest.providerId keeps resolving"
+          }
+        ],
+        "pattern": "reference_data",
+        "proposal": "reference_data",
+        "pattern_evidence": ".migration/access_patterns.json: reference_data_candidate disposition: banking_core_utility_account is a seed-only provider directory (6 rows, no FK in or out, read by id and by provider_name, never written by the application); labelled reference_data, kept as its own collection with numeric _id so UtilityPaymentRequest.providerId keeps resolving"
+      },
+      "indexes": [
+        {
+          "keys": [
+            [
+              "providerName",
+              1
+            ]
+          ],
+          "origin": "decision",
+          "evidence": [
+            {
+              "kind": "decision",
+              "ref": "access_pattern ap-57be51b5c5: the proposer skips cold patterns in _index_plan, so this index is added by decision per the ticket's index plan; not declared unique because the ticket's plan does not call for it and the source has no UNIQUE on provider_name"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "collection": "mmpFixtureMeta",
+      "root_table": "mmp_fixture_meta",
+      "key": {
+        "source": [],
+        "target": []
+      },
+      "fields": [
+        {
+          "source": "initialized_at",
+          "target": "initializedAt",
+          "source_type": "TIMESTAMP",
+          "bson_type": "date",
+          "rules": [
+            "datetime_utc_truncate_ms"
+          ]
+        },
+        {
+          "source": "scripts_failed",
+          "target": "scriptsFailed",
+          "source_type": "INT",
+          "bson_type": "int",
+          "rules": []
+        }
+      ],
+      "embeds": [],
+      "decision": {
+        "shape": "collection",
+        "key_strategy": "no primary key and no usable unique key: comparison key needed (set_key decision)",
+        "key_fields": [],
+        "natural_keys": [],
+        "references": [],
+        "open_questions": []
+      },
+      "indexes": []
+    }
+  ],
+  "canonicalization": {
+    "version": "map-draft-2-canon",
+    "rules": [
+      {
+        "rule": "decimal_round",
+        "applies_to": "decimal",
+        "params": {}
+      },
+      {
+        "rule": "datetime_utc_truncate_ms",
+        "applies_to": "date",
+        "params": {}
+      },
+      {
+        "rule": "rstrip_spaces",
+        "applies_to": "string",
+        "params": {}
+      },
+      {
+        "rule": "null_missing_equiv",
+        "applies_to": "*",
+        "params": {}
+      },
+      {
+        "rule": "yn_to_bool",
+        "applies_to": "bool",
+        "params": {}
+      },
+      {
+        "rule": "int_to_bool",
+        "applies_to": "bool",
+        "params": {}
+      },
+      {
+        "rule": "csv_to_array",
+        "applies_to": "array",
+        "params": {}
+      },
+      {
+        "rule": "date_string_to_date",
+        "applies_to": "date",
+        "params": {
+          "format": "%Y-%m-%d"
+        }
+      },
+      {
+        "rule": "json_parse",
+        "applies_to": "object",
+        "params": {}
+      },
+      {
+        "rule": "bits_to_int",
+        "applies_to": "long",
+        "params": {}
+      }
+    ]
+  },
+  "modeling": {
+    "mode": "live_catalog",
+    "cardinality_default": "assumed",
+    "census_inputs": [
+      {
+        "query_id": "tables",
+        "sha256": "84c65bf461866bfd94f0e49506b62da69a84978b3f38f01a1813e46ec06d2d14",
+        "rows": 5,
+        "origin": "live"
+      },
+      {
+        "query_id": "columns",
+        "sha256": "4c833ddeba72c983ea891d911590d95a03e48bc3d62c6c70a3451014acaab997",
+        "rows": 23,
+        "origin": "live"
+      },
+      {
+        "query_id": "constraints",
+        "sha256": "597dcca2abc268d68c037834d7bf614e9cdd52ad1b877eaed8ea2bc657cd92b2",
+        "rows": 6,
+        "origin": "live"
+      },
+      {
+        "query_id": "indexes",
+        "sha256": "b01ac93ec96a91f82be7956062fd18268b19d0cd8142f5ae44401aece96e5899",
+        "rows": 6,
+        "origin": "live"
+      },
+      {
+        "query_id": "routines",
+        "sha256": "6775200748c9fa8527df805daf0bcb7b7680a6546c225492a6b7496d7d1f6c0a",
+        "rows": 0,
+        "origin": "live"
+      },
+      {
+        "query_id": "triggers",
+        "sha256": "5b071303e41ce19d4eaafccac0be8e5173435532f93f8a67644d95f5d29c5d33",
+        "rows": 0,
+        "origin": "live"
+      },
+      {
+        "query_id": "events",
+        "sha256": "f7a06d2dcbea995531243cbd205c2ec01417854386faf6b99bff19c24478dd0b",
+        "rows": 0,
+        "origin": "live"
+      },
+      {
+        "query_id": "views",
+        "sha256": "9793efae7d307d53d789a39d785ce3a272ef68f9cd2c7f7610533e8b8450422c",
+        "rows": 0,
+        "origin": "live"
+      }
+    ],
+    "not_known_from_ddl": [
+      "application access patterns (read-together vs written-separately)",
+      "semantics of triggers, packages, and scheduler jobs (names and targets only)",
+      "whether unenforced *_ID pointers actually resolve"
+    ],
+    "unresolved": [],
+    "rationale": [
+      {
+        "parent": "banking_core_user",
+        "child": "banking_core_account",
+        "child_columns": [
+          "user_id"
+        ],
+        "rule": "shared_child",
+        "decision": "reference",
+        "basis": "assumed",
+        "basis_sources": [
+          "ddl"
+        ],
+        "evidence": [],
+        "measurements": {
+          "fanout:banking_core_account->banking_core_user(user_id)": {
+            "parents": 4,
+            "parents_zero": 0,
+            "min": 2,
+            "p50": 3,
+            "p95": 5,
+            "p99": 5,
+            "max": 5
+          },
+          "fk_integrity:banking_core_account->banking_core_user(user_id)": {
+            "child_rows": 14,
+            "null_fk": 0,
+            "orphans": 0
+          },
+          "embed_bytes:banking_core_account->banking_core_user(user_id)": {
+            "p50": 264,
+            "p99": 264,
+            "max": 264
+          },
+          "row_bytes:banking_core_user": {
+            "rows_seen": 4,
+            "avg_bytes": 36.0,
+            "max_bytes": 39.0
+          }
+        }
+      },
+      {
+        "parent": "banking_core_account",
+        "child": "banking_core_transaction",
+        "child_columns": [
+          "account_id"
+        ],
+        "rule": "child_written_alone",
+        "decision": "reference",
+        "basis": "derived",
+        "basis_sources": [
+          "ddl",
+          "access"
+        ],
+        "evidence": [
+          {
+            "kind": "access_pattern",
+            "ref": "ap-c8311a4a99"
+          },
+          {
+            "kind": "access_pattern",
+            "ref": "ap-f203a1ea0e"
+          },
+          {
+            "kind": "access_pattern",
+            "ref": "ap-706e6c275b"
+          }
+        ],
+        "measurements": {
+          "fanout:banking_core_transaction->banking_core_account(account_id)": {
+            "parents": 14,
+            "parents_zero": 14,
+            "min": 0,
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "max": 0
+          },
+          "fk_integrity:banking_core_transaction->banking_core_account(account_id)": {
+            "child_rows": 0,
+            "null_fk": 0,
+            "orphans": 0
+          },
+          "embed_bytes:banking_core_transaction->banking_core_account(account_id)": {
+            "p50": 0.0,
+            "p99": 0.0,
+            "max": 0
+          },
+          "row_bytes:banking_core_account": {
+            "rows_seen": 14,
+            "avg_bytes": 52.7143,
+            "max_bytes": 54.0
+          }
+        },
+        "access_ids": [
+          "ap-c8311a4a99",
+          "ap-f203a1ea0e",
+          "ap-706e6c275b"
+        ]
+      }
+    ],
+    "policy": {
+      "max_doc_bytes": 2097152,
+      "max_embed_fanout": 1000
+    },
+    "data_profile": {
+      "path": "/home/ubuntu/repos/ts-java-spring-boot-internet-banking/.migration/data_profile.json",
+      "sha256": "ccadd09e4ff322ca91116eb6f598bad1fe63737764d7ea2fbdf206e4d9626817",
+      "as_of": "2026-10-07T01:27:48.506183+00:00"
+    },
+    "access_patterns": {
+      "path": "/home/ubuntu/repos/ts-java-spring-boot-internet-banking/.migration/access_patterns.json",
+      "sha256": "65e41813bdab6a39d40d27103bdec33c2887971c1ef96b896b84fb83f5d3e1a7"
+    },
+    "dropped_indexes": [],
+    "decisions": [
+      {
+        "op": "reference",
+        "from": "bankingCoreUser",
+        "child_table": "banking_core_account",
+        "id": "d-embed-accounts",
+        "evidence": {
+          "kind": "access_pattern",
+          "ref": "ap-c0f0ff167d",
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/repository/BankAccountRepository.java",
+          "lines": "10",
+          "quote": "Optional<BankAccountEntity> findByNumber(String accountNumber);",
+          "note": "d-embed-accounts: accounts are read alone by account number (hot, fund transfer and utility payment resolve both legs via findByNumber, never through the user) so they stay a separate collection keyed by their own _id with userId as a reference"
+        },
+        "cited": "access_pattern ap-c0f0ff167d: d-embed-accounts: accounts are read alone by account number (hot, fund transfer and utility payment resolve both legs via findByNumber, never through the user) so they stay a separate collection keyed by their own _id with userId as a reference",
+        "status": "PROPOSED"
+      },
+      {
+        "op": "reference",
+        "from": "bankingCoreUser",
+        "child_table": "banking_core_account",
+        "id": "d-embed-accounts",
+        "evidence": {
+          "kind": "access_pattern",
+          "ref": "ap-747765bf86",
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+          "lines": "87-101",
+          "quote": "bankAccountRepository.save(fromBankAccountEntity); ... bankAccountRepository.save(toBankAccountEntity);",
+          "note": "d-embed-accounts: balances are updated per transfer on the account row alone, independent of the user document; the fixture fan-out (user->account 2/3/5 of 4 users) says nothing about production and an embedded array would be rewritten on every transfer"
+        },
+        "cited": "access_pattern ap-747765bf86: d-embed-accounts: balances are updated per transfer on the account row alone, independent of the user document; the fixture fan-out (user->account 2/3/5 of 4 users) says nothing about production and an embedded array would be rewritten on every transfer",
+        "status": "PROPOSED"
+      },
+      {
+        "op": "reference",
+        "from": "bankingCoreAccount",
+        "child_table": "banking_core_transaction",
+        "id": "d-embed-transactions",
+        "evidence": {
+          "kind": "access_pattern",
+          "ref": "ap-c8311a4a99",
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+          "lines": "94-106",
+          "quote": "transactionRepository.save(TransactionEntity.builder().transactionType(TransactionType.FUND_TRANSFER) ... transactionRepository.save(TransactionEntity.builder()",
+          "note": "d-embed-transactions: transactions are append-only and unbounded (two rows per fund transfer sharing one transactionId, one per utility payment, never read back in core-banking); an embedded array under the account would grow without bound, so transactions stay a separate collection with accountId as a reference"
+        },
+        "cited": "access_pattern ap-c8311a4a99: d-embed-transactions: transactions are append-only and unbounded (two rows per fund transfer sharing one transactionId, one per utility payment, never read back in core-banking); an embedded array under the account would grow without bound, so transactions stay a separate collection with accountId as a reference",
+        "status": "PROPOSED"
+      },
+      {
+        "op": "reference",
+        "from": "bankingCoreAccount",
+        "child_table": "banking_core_transaction",
+        "id": "d-embed-transactions",
+        "evidence": {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/model/entity/TransactionEntity.java",
+          "lines": "32-34",
+          "quote": "@OneToOne(cascade = CascadeType.ALL) @JoinColumn(name = \"account_id\", referencedColumnName = \"id\") private BankAccountEntity account;",
+          "note": "d-embed-transactions: JPA declares @OneToOne but the DDL FK account_id carries a non-unique KEY (V1.0.20210429210839__create_transaction_table.sql:11) and the service inserts many rows per account, so the entity cardinality is not trusted; the fixture has 0 transactions (data_profile fanout account->transaction unmeasured, d-profile-outlier = no seeding) so the proposer had no data for this edge"
+        },
+        "cited": "core-banking-service/src/main/java/com/javatodev/finance/model/entity/TransactionEntity.java: d-embed-transactions: JPA declares @OneToOne but the DDL FK account_id carries a non-unique KEY (V1.0.20210429210839__create_transaction_table.sql:11) and the service inserts many rows per account, so the entity cardinality is not trusted; the fixture has 0 transactions (data_profile fanout account->transaction unmeasured, d-profile-outlier = no seeding) so the proposer had no data for this edge",
+        "status": "PROPOSED"
+      },
+      {
+        "op": "index",
+        "collection": "bankingCoreAccount",
+        "keys": [
+          [
+            "number",
+            1
+          ]
+        ],
+        "unique": true,
+        "evidence": {
+          "kind": "access_pattern",
+          "ref": "ap-c0f0ff167d",
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/repository/BankAccountRepository.java",
+          "lines": "10",
+          "quote": "Optional<BankAccountEntity> findByNumber(String accountNumber);",
+          "note": "hot lookup by account number returns Optional (at most one row); the source DDL has no UNIQUE on number, the fixture's 14 numbers are distinct, the target index is declared unique per the ticket's index plan"
+        },
+        "cited": "access_pattern ap-c0f0ff167d: hot lookup by account number returns Optional (at most one row); the source DDL has no UNIQUE on number, the fixture's 14 numbers are distinct, the target index is declared unique per the ticket's index plan",
+        "status": "PROPOSED"
+      },
+      {
+        "op": "index",
+        "collection": "bankingCoreUser",
+        "keys": [
+          [
+            "identificationNumber",
+            1
+          ]
+        ],
+        "unique": true,
+        "evidence": {
+          "kind": "access_pattern",
+          "ref": "ap-caf6a913b3",
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/repository/UserRepository.java",
+          "lines": "10",
+          "quote": "Optional<UserEntity> findByIdentificationNumber(String identificationNumber);",
+          "note": "warm lookup by identification number returns Optional (at most one row); the source DDL has no UNIQUE on identification_number, the fixture's 4 values are distinct, the target index is declared unique per the ticket's index plan"
+        },
+        "cited": "access_pattern ap-caf6a913b3: warm lookup by identification number returns Optional (at most one row); the source DDL has no UNIQUE on identification_number, the fixture's 4 values are distinct, the target index is declared unique per the ticket's index plan",
+        "status": "PROPOSED"
+      },
+      {
+        "op": "index",
+        "collection": "bankingCoreUtilityAccount",
+        "keys": [
+          [
+            "providerName",
+            1
+          ]
+        ],
+        "evidence": {
+          "kind": "access_pattern",
+          "ref": "ap-57be51b5c5",
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/repository/UtilityAccountRepository.java",
+          "lines": "10",
+          "quote": "Optional<UtilityAccountEntity> findByProviderName(String providerName);",
+          "note": "the proposer skips cold patterns in _index_plan, so this index is added by decision per the ticket's index plan; not declared unique because the ticket's plan does not call for it and the source has no UNIQUE on provider_name"
+        },
+        "cited": "access_pattern ap-57be51b5c5: the proposer skips cold patterns in _index_plan, so this index is added by decision per the ticket's index plan; not declared unique because the ticket's plan does not call for it and the source has no UNIQUE on provider_name",
+        "status": "PROPOSED"
+      },
+      {
+        "op": "index",
+        "collection": "bankingCoreTransaction",
+        "keys": [
+          [
+            "accountId",
+            1
+          ]
+        ],
+        "evidence": {
+          "kind": "access_pattern",
+          "ref": "ap-9925ea846a",
+          "file": "core-banking-service/src/main/resources/db/migration/V1.0.20210429210839__create_transaction_table.sql",
+          "lines": "11-12",
+          "quote": "KEY `FKk9w2ogq595jbe8r2due7vv3xr`(`account_id`), CONSTRAINT `FKk9w2ogq595jbe8r2due7vv3xr` FOREIGN KEY (`account_id`) REFERENCES `banking_core_account`(`id`)",
+          "note": "reference-side index on the account FK, kept from the proposer's origin=reference entry and backed by the non-unique source KEY; production reads transactions by account and date range"
+        },
+        "cited": "access_pattern ap-9925ea846a: reference-side index on the account FK, kept from the proposer's origin=reference entry and backed by the non-unique source KEY; production reads transactions by account and date range",
+        "status": "PROPOSED"
+      },
+      {
+        "op": "pattern",
+        "collection": "bankingCoreUtilityAccount",
+        "pattern": "reference_data",
+        "evidence": {
+          "file": ".migration/access_patterns.json",
+          "lines": "18-21",
+          "quote": "\"never_written_by_app\": [ \"banking_core_user\", \"banking_core_utility_account\" ]",
+          "note": "reference_data_candidate disposition: banking_core_utility_account is a seed-only provider directory (6 rows, no FK in or out, read by id and by provider_name, never written by the application); labelled reference_data, kept as its own collection with numeric _id so UtilityPaymentRequest.providerId keeps resolving"
+        },
+        "cited": ".migration/access_patterns.json: reference_data_candidate disposition: banking_core_utility_account is a seed-only provider directory (6 rows, no FK in or out, read by id and by provider_name, never written by the application); labelled reference_data, kept as its own collection with numeric _id so UtilityPaymentRequest.providerId keeps resolving",
+        "status": "PROPOSED"
+      },
+      {
+        "op": "resolve",
+        "match": {
+          "kind": "no_comparison_key",
+          "table": "mmp_fixture_meta"
+        },
+        "resolution": "excluded: mmp_fixture_meta is the plugin's own mysql-init.sh readiness marker (initialized_at, scripts_failed; no PK; 0 rows), not customer data and not one of the 4 in-scope core-banking tables. It must not be loaded, indexed or reconciled; model_patch.py has no op that removes a collection, so the mmpFixtureMeta entry stays in the spec with an empty key and this resolution, and the unit-migration / recon steps skip it (see 05_decisions.md s2.1-census entry 1 and s2.3 X10).",
+        "evidence": {
+          "file": ".migration/05_decisions.md",
+          "lines": "298-312",
+          "quote": "Disposition: `mmp_fixture_meta` is fixture scaffolding, out of scope, and does not ... The model step (`model_proposal.py`) will otherwise propose a `mmp_fixture_meta` collection",
+          "note": "UNT5-6 (s2.1-census) entry 1 and UNT5-8 (s2.3-dependency-register) X10 at .migration/05_decisions.md:468-469 (`git grep mmp_fixture_meta ... ':!.migration'` = 0 hits: referenced by nothing in the app)"
+        },
+        "cited": ".migration/05_decisions.md: UNT5-6 (s2.1-census) entry 1 and UNT5-8 (s2.3-dependency-register) X10 at .migration/05_decisions.md:468-469 (`git grep mmp_fixture_meta ... ':!.migration'` = 0 hits: referenced by nothing in the app)",
+        "status": "PROPOSED"
+      }
+    ],
+    "resolved": [
+      {
+        "kind": "no_comparison_key",
+        "table": "mmp_fixture_meta",
+        "proposal": "name the columns that identify a row (set_key) or accept load-order only",
+        "resolution": "excluded: mmp_fixture_meta is the plugin's own mysql-init.sh readiness marker (initialized_at, scripts_failed; no PK; 0 rows), not customer data and not one of the 4 in-scope core-banking tables. It must not be loaded, indexed or reconciled; model_patch.py has no op that removes a collection, so the mmpFixtureMeta entry stays in the spec with an empty key and this resolution, and the unit-migration / recon steps skip it (see 05_decisions.md s2.1-census entry 1 and s2.3 X10).",
+        "evidence": ".migration/05_decisions.md: UNT5-6 (s2.1-census) entry 1 and UNT5-8 (s2.3-dependency-register) X10 at .migration/05_decisions.md:468-469 (`git grep mmp_fixture_meta ... ':!.migration'` = 0 hits: referenced by nothing in the app)"
+      }
+    ]
+  }
+}
