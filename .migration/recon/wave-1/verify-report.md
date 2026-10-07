@@ -176,3 +176,21 @@ Verify result JSON (also at `.migration/recon/wave-1/verify-result.json`):
  "findings": [],
  "report_path": "recon/wave-1:.migration/recon/wave-1/verify-report.md"}
 ```
+
+## 10. Self-check with `preflight.py --grade --verify` (verifier's own run; the manager's run is authoritative)
+
+The wave spec was reconstructed from the ticket block (1 batch `w1-b01`, unit `core-banking`, the four write targets, `map-draft-3`
+/ `tol-1` with the two pinned sha256s, `fixture_manifest .migration/fixtures/w1-b01.json`, `auto_merge false`, `source_access live`,
+`target_access migration_cluster`) and hashes to `manifest_sha f672bf2f9220` — identical to the ticket, so the headers of this
+report are checked against the real manifest. Run from `$HOME` with `GIT_DIR`/`GIT_WORK_TREE` pointing at the repo (ledger
+s4.1.verify entry 3) after pushing `origin/recon/wave-1` at `5cd2ff0`:
+
+```
+python3 <plugin>/skills/wave-preflight/preflight.py --wave <wave-1.json> --root <abs repo> \
+  --grade <PR-branch .migration/recon/core-banking/batch_result.json> \
+  --verify .migration/recon/wave-1/verify-result.json --run-id UNT5-15
+→ "verify_problems": [], "mergeable_prs": ["https://github.com/Cognition-Partner-Workshops/ts-java-spring-boot-internet-banking/pull/39"]
+  wave 1 OK: 1 batches, manifest_sha f672bf2f9220   (exit 0)
+```
+
+Full transcript: `preflight-verify-transcript.txt` beside this report.
