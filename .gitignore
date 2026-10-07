@@ -1,1 +1,3 @@
 .idea
+
+.migration/**/*.env

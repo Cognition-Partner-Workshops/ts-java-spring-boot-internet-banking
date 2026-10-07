@@ -133,3 +133,47 @@ what was done, evidence. Nothing here authorizes a write: write scope is `.migra
   same. Fix options for the manager: unload dbx-migration-factory for this board's sessions, or add a
   `catalogs` key to the allowlist by PR (changes the specified file; not done here).
 - Evidence: `python3 .../dbx_guard.py` with `cwd` = repo root -> exit 2 and the message above (this session).
+
+## 2026-10-07 · s2.4-fixture · plugin compose + mysql-init.sh: nothing to correct
+
+- Tool said: `skills/schema-modeling/docker-compose.local.yml --profile mysql` with `MYSQL_FIXTURE_DB=banking_core_service`
+  and `MYSQL_DDL_DIR=<repo>/core-banking-service/src/main/resources/db/migration` runs the three Flyway files in name
+  order and reports readiness through `mmp_fixture_meta.scripts_failed = 0`.
+- Observed: exactly that, first attempt. `docker compose logs mysql` lists `== V1.0.20210427174638__create_base_table_structure.sql`,
+  `== V1.0.20210427174721__temp_data.sql`, `== V1.0.20210429210839__create_transaction_table.sql`, `== scripts failed: 0`,
+  `== fixture ready`; container `(healthy)` 25 s after `up -d`. The schema-qualified inserts in the seed resolve because
+  the database is `banking_core_service`. Row counts: user 4, account 14, utility_account 6, transaction 0.
+- Did: no change to the plugin compose, init script or Flyway files. Noted that the floating `mysql:8` tag resolved to
+  MySQL **8.4.11** (digest `sha256:6ea90827…`), not an 8.0.x build (the app's own `docker-compose/mysql/Dockerfile` is `FROM mysql:8.4.0`, so the major matches); the legacy `bigint(20)` display widths still load.
+- Evidence: `.migration/fixtures/w1-b01.json` (`mmp_fixture_meta`, `scripts_run_in_order`, `server`).
+
+## 2026-10-07 · s2.4-fixture · manifest `method`: ticket says `flyway_seed`, preflight accepts only `synthetic|masked_export`
+
+- Tool said: ticket UNT5-5 asks for `method: flyway_seed`; `skills/wave-preflight/preflight.py` `FIXTURE_METHODS =
+  ("synthetic", "masked_export")` and `validate_fixture_manifest` exits non-zero on anything else, so a `flyway_seed`
+  manifest would fail `s4.1.0-preflight` for every batch that cites it.
+- Did: wrote `method: synthetic` (the seed is the repo's synthetic demo data; no production rows, `masked_columns: []`)
+  and kept the ticket's label as `seed_method: flyway_seed` plus a `method_note`. Validated with
+  `preflight.validate_fixture_manifest("w1-b01", ".migration/fixtures/w1-b01.json", <repo>)` -> OK.
+- Evidence: `.migration/fixtures/w1-b01.json`; validation output in the UNT5-5 PR body.
+
+## 2026-10-07 · s2.4-fixture · read-only user and UTC pin are not provisioned by the plugin fixture
+
+- Tool said: the MySQL profile (`skills/mongo-migration/profiles/mysql.md`) requires a read tier with `SELECT` + `SHOW VIEW`
+  only and `time_zone='+00:00'` for load and recon sessions; `docker-compose.local.yml` / `mysql-init.sh` provision only
+  `root` and expose no `command:`/`cnf` hook for server options.
+- Did (fixture wiring, not the plugin files): as root on the fixture, `CREATE USER 'fixture_ro'@'%'`, `GRANT SELECT, SHOW VIEW
+  ON banking_core_service.*`, `SET PERSIST time_zone='+00:00'` (survives container restarts via the `mysql-data` volume;
+  `@@global.time_zone` = `+00:00`). Verified as `fixture_ro` over PyMySQL with `SET SESSION TRANSACTION READ ONLY`:
+  `CREATE TABLE` -> error 1792, `INSERT` -> error 1142; the harness additionally sets `SET time_zone='+00:00'` per session
+  (`recon/adapters.py`). The DSN is `MMP_RT_SRC_DSN` in `$HOME/.mmp-rt/b1-mysql.env` (0600, outside the repo), never committed;
+  `.gitignore` now also ignores `.migration/**/*.env` for any in-repo copy. The fixture is a local throwaway, not the
+  customer source, so rule 1 (source read-only) is not touched by these grants.
+- Evidence: `.migration/fixtures/w1-b01.json` (`read_only_user`, `server.time_zone_pin`, `dsn`); PR body.
+
+## 2026-10-07 · s2.4-fixture · snapshot still lacks the `mysql` client from PR #26
+
+- Tool said: `.devin/blueprint.yaml` (merged UNT5-1) installs `mysql-client-8.0` and pulls `mysql:8` in `initialize`.
+- Observed: this worker VM had neither (`mysql: command not found`; only `mongo:7` pulled) — the snapshot has not been
+  rebuilt since the merge. Installed/pulled by hand with the blueprint's own commands; nothing to change in the blueprint.
+- Evidence: `mysql  Ver 8.0.46-0ubuntu0.22.04.4`; `docker pull mysql:8` in this session.
