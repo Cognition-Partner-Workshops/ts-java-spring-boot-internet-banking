@@ -12,6 +12,9 @@ public class BankAccountMapper extends BaseMapper<BankAccountEntity, BankAccount
         BankAccountEntity entity = new BankAccountEntity();
         if (dto != null) {
             BeanUtils.copyProperties(dto, entity, "user");
+            if (dto.getUser() != null) {
+                entity.setUserId(dto.getUser().getId());
+            }
         }
         return entity;
     }
@@ -20,7 +23,7 @@ public class BankAccountMapper extends BaseMapper<BankAccountEntity, BankAccount
     public BankAccount convertToDto(BankAccountEntity entity, Object... args) {
         BankAccount dto = new BankAccount();
         if (entity != null) {
-            BeanUtils.copyProperties(entity, dto, "user");
+            BeanUtils.copyProperties(entity, dto, "userId");
         }
         return dto;
     }
