@@ -598,3 +598,95 @@ what was done, evidence. Nothing here authorizes a write: write scope is `.migra
   copied into `.migration/`. No shell was blocked by the dbx-migration-factory guard. No target access was used; Atlas
   untouched.
 - Evidence: this session's command log; UNT5-6 entry (4).
+
+## 2026-10-07 · s3.1-mapping-spec · (1) proposer did not embed; user->account stays `assumed` because `shared_child` short-circuits the access rules
+
+- Tool said: `model_proposal.py --census .migration/census.json --data-profile .migration/data_profile.json --access-patterns
+  .migration/access_patterns.json --version map-draft-1` (defaults 2 MiB / 1000) -> exit 0, `collections=5 embeds=0 unresolved=1
+  (cardinality: assumed)`. Rationale rows: `banking_core_user -> banking_core_account: shared_child / reference / assumed` and
+  `banking_core_account -> banking_core_transaction: child_written_alone / reference / derived` (access ids ap-c8311a4a99,
+  ap-f203a1ea0e, ap-706e6c275b). Same as the manager's dry run. The ticket's "will likely propose embedding both" did not happen:
+  the degenerate fixture counts (fan-out 2/3/5, 0 transactions) never reached an embed rule.
+- Blind spot: `_decide_relationship` returns `shared_child / assumed` as soon as the child is itself a parent (account -> transaction),
+  before looking at access patterns, so the hot read-alone pattern ap-c0f0ff167d (`findByNumber`) that would have made the
+  edge `child_read_alone / derived` is never consulted. `model_patch.py` records the cited `reference` decision in
+  `modeling.decisions` but does not rewrite the `rationale` row, so `modeling.rationale[0].basis` still reads `assumed` in
+  map-draft-2; the derived evidence lives in `modeling.decisions[0..1]`. Plugin finding, not fixed here.
+- Did: applied d-embed-accounts and d-embed-transactions as selected (nothing in the evidence contradicts them): 2 cited `reference`
+  decisions per edge (ap-c0f0ff167d + `BankAccountRepository.java:10`; ap-747765bf86 + `TransactionService.java:87-101`;
+  ap-c8311a4a99 + `TransactionService.java:94-106`; `TransactionEntity.java:32-34` @OneToOne vs non-unique DDL KEY
+  `create_transaction_table.sql:11`). Human review substituted (unattended): the design review in SKILL.md was done by the worker.
+- Evidence: `.migration/design_decisions.json` entries 1-4; `.migration/mapping_spec.json` `modeling.rationale`, `modeling.decisions`.
+
+## 2026-10-07 · s3.1-mapping-spec · (2) no way to drop `mmp_fixture_meta` without hand-editing: `model_patch.py` has no exclude op
+
+- Tool said: proposer emits a fifth collection `mmpFixtureMeta` (`key.source = []`, fields `initializedAt`, `scriptsFailed`,
+  `key_strategy: "no primary key and no usable unique key: comparison key needed (set_key decision)"`) plus
+  `modeling.unresolved = [{"kind": "no_comparison_key", "table": "mmp_fixture_meta"}]`. `model_patch.py` `OPS = {embed, reference,
+  date_format, set_key, pattern, rename, resolve, index}`: nothing removes a collection; `model_proposal.py` has no `--exclude`.
+- Did: did **not** hand-edit the spec and did **not** filter the census (would break the `census_inputs` sha256 pins and the
+  `data_profile.census_sha256` check). Dispositioned via a `resolve` decision on the `no_comparison_key` item with resolution
+  `excluded: ...` citing UNT5-6 entry (1) (`05_decisions.md:298-312`) and UNT5-8 X10 (`:468-469`). Residual: `mmpFixtureMeta` is
+  still listed in `collections` (5 entries) with an empty key and no indexes, which does not literally meet "must not become a
+  collection". Flagged to the manager in the ticket report; the unit-migration / recon steps must skip any collection whose
+  `no_comparison_key` item is resolved `excluded`, and must never create `mmp_rt_b1_mysql.mmpFixtureMeta`. Plugin finding:
+  an `exclude` op (or proposer `--exclude-table`) that drops the collection and records the citation.
+- Evidence: `.migration/design_decisions.json` entry 10; `.migration/mapping_spec.json` `modeling.resolved[0]`, `collections[4]`.
+
+## 2026-10-07 · s3.1-mapping-spec · (3) index plan: cold `provider_name` pattern skipped by the proposer; uniqueness stricter than the source
+
+- Tool said: `_index_plan` skips `frequency == "cold"`, so `bankingCoreUtilityAccount.indexes = []` although ap-57be51b5c5
+  (`findByProviderName`) is confirmed. Proposed indexes: `bankingCoreAccount.number` (access, unique via natural key),
+  `bankingCoreAccount.userId` (reference), `bankingCoreUser.identificationNumber` (access, unique), `bankingCoreTransaction.accountId`
+  (reference). `dropped_indexes = []`.
+- Did: `index` decisions per the ticket's plan: `number` unique (ap-c0f0ff167d), `identificationNumber` unique (ap-caf6a913b3),
+  `providerName` non-unique (ap-57be51b5c5, origin `decision`), `accountId` (DDL KEY `create_transaction_table.sql:11-12`). Note for
+  s3.2/load: the MySQL DDL has **no** UNIQUE on `number` or `identification_number`; uniqueness is implied only by the `Optional<>`
+  finders and holds on the fixture (14 distinct numbers, 4 distinct identification numbers), so the target is stricter than the
+  source — a duplicate on a real export would fail the index build, not silently merge. No index on `transaction_id` or on
+  `transaction.(account_id, created)`-style ranges: core-banking has no transaction reader (`write_only_tables`), and the table has
+  no timestamp column; adding one would be an unnecessary index. `userId` reference index kept (JPA `@OneToMany(mappedBy="user")`
+  read, ap-dfe8974af9).
+- Evidence: `.migration/design_decisions.json` entries 5-8; `mapping_spec.json` per-collection `indexes`.
+
+## 2026-10-07 · s3.1-mapping-spec · (4) proposer ignores `data_profile.supplement.json`; enum domains come from the Java enums; no `user_id` on utility accounts
+
+- Tool said: the proposer reads only `data_profile.json`; `status`, `type`, `transaction_type` are emitted as plain `string` fields
+  with no domain. No `reference_data_candidate` open question was raised on any collection (`open_questions = []` everywhere).
+- Did: domains recorded here (no decision op carries a value domain): `AccountStatus {PENDING, ACTIVE, DORMANT, BLOCKED}`,
+  `AccountType {SAVINGS_ACCOUNT, FIXED_DEPOSIT, LOAN_ACCOUNT}`, `TransactionType {FUND_TRANSFER, UTILITY_PAYMENT}`
+  (`core-banking-service/.../model/{AccountStatus,AccountType,TransactionType}.java`); the supplement's measured domains
+  `status {ACTIVE: 14}`, `type {SAVINGS_ACCOUNT: 14}`, `transaction_type {}` are strict subsets, carried as strings, recon compares
+  them exactly. `reference_data_candidate` dispositioned by hand: `pattern reference_data` on `bankingCoreUtilityAccount`
+  (6 seed rows, `never_written_by_app`, no FK in or out, read by id and provider_name) — label only, still its own collection
+  with numeric `_id` because `UtilityPaymentRequest.providerId` resolves by id. Census check: `banking_core_utility_account` has
+  3 columns (`id`, `number`, `provider_name`) and no `user_id`, so no FK was modelled (ticket question (c) answered: absent).
+- Evidence: `.migration/data_profile.supplement.json`; `.migration/census.json` `tables.banking_core_utility_account`;
+  `.migration/design_decisions.json` entry 9.
+
+## 2026-10-07 · s3.1-mapping-spec · (5) constraints the spec cannot express, handed to s3.2 (register s2.3 entry 2)
+
+- Tool said: `key_strategy: "auto-increment identity: keep numeric _id on load, application generates ids after cutover"` on all four
+  in-scope collections; `id` fields `bson_type: long`. Nothing in the spec states the int range, the transfer atomicity, or the
+  balance arithmetic.
+- Did: recorded here, no spec change. (a) `_id` stays numeric and must stay <= 2^31-1: user-service `UserResponse.id` is `Integer`
+  (`internet-banking-user-service/.../UserResponse.java:15`), so post-cutover id generation needs a counter / `findOneAndUpdate`
+  sequence, not ObjectId. (b) Fund transfer = 2 `bankingCoreAccount` updates + 2 `bankingCoreTransaction` inserts sharing one
+  `transactionId`, atomically (`TransactionService.java:83-110`): separate collections mean a multi-document transaction on Atlas.
+  (c) Utility payment = 1 account update + 1 transaction insert (`:48-75`). (d) Balance arithmetic preserved verbatim, including the
+  `availableBalance = actualBalance - amount` double subtraction (`:63-64`, `:90-91`, `:99-100`); not corrected by the migration.
+  (e) HTTP contracts unchanged.
+- Evidence: files cited above; `.migration/05_decisions.md` s2.3 entry 2.
+
+## 2026-10-07 · s3.1-mapping-spec · (6) run mechanics: absolute paths recorded in the spec; `--check` exit 0 prints nothing; nothing else to correct
+
+- Tool said: `modeling.data_profile.path` / `modeling.access_patterns.path` hold `/home/ubuntu/repos/ts-java-spring-boot-internet-banking/
+  .migration/...` because every command ran from `$HOME` with absolute paths (dbx-migration-factory guard blocks cwd inside the repo);
+  `--check` verifies the sha256 pins (`data_profile ccadd09e...`, `access_patterns 65e41813...`), not the path. `model_patch.py --spec
+  --decisions --out --version map-draft-2 --workspace <abs repo> --data-profile --census --access-patterns` -> exit 0 `collections=5
+  embeds=0 (derived=0) unresolved=0 decisions=10`; `model_patch.py --spec --check --census --data-profile --access-patterns` -> exit 0,
+  no stdout (no `g-model-evidence:` line = no finding).
+- Did: nothing to correct; `access_scan.py` not re-run; census, profile, supplement and access files untouched (census sha256 equals
+  `origin/mmp-rt/b1-mysql`). No source or target connection; Atlas untouched. Branch rebased onto `origin/mmp-rt/b1-mysql` (`1ac822e`)
+  before the PR.
+- Evidence: this session's command log; PR body.
