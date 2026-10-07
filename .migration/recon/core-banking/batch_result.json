@@ -1,0 +1,17 @@
+{
+  "batch": "w1-b01",
+  "status": "PASS",
+  "recon_results": [
+    ".migration/recon/core-banking/result.json"
+  ],
+  "write_targets": [
+    "mmp_rt_b1_mysql.bankingCoreUser",
+    "mmp_rt_b1_mysql.bankingCoreAccount",
+    "mmp_rt_b1_mysql.bankingCoreUtilityAccount",
+    "mmp_rt_b1_mysql.bankingCoreTransaction"
+  ],
+  "pr_url": "https://github.com/Cognition-Partner-Workshops/ts-java-spring-boot-internet-banking/pull/39",
+  "branch": "devin/1791339936-unt5-14-migrate-core-banking",
+  "failure_class": "",
+  "one_line_summary": "core-banking: live PASS (migration_cluster, merge_eligible, 4 tiers, 0 findings); bankingCoreTransaction graded on 0 rows"
+}
