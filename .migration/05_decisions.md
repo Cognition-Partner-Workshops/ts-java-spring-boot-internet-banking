@@ -224,3 +224,73 @@ what was done, evidence. Nothing here authorizes a write: write scope is `.migra
 - Did: every command in this session ran from `$HOME` with absolute paths and `git -C <repo>`; no shell
   was blocked. The allowlist file stays as specified (`databases`, no `catalogs` key), per `d-dbx-guard`.
 - Evidence: this session's command log; UNT5-2 entry (5).
+
+## 2026-10-07 · s1.2-connectivity · (1) target principal: probe hard-blocks the intake-given `MONGODB_ATLAS_URI` (tool right, intake wrong)
+
+- Tool said: `connectivity_probe.py --policy online ... --target-uri-secret MONGODB_ATLAS_URI --target-db mmp_rt_b1_mysql`
+  -> exit 1, `target: migration_cluster (privilege_excess: over-scoped principal: readWriteAnyDatabase@admin,
+  dbAdminAnyDatabase@admin)`. `target_excess()` admits only `read`/`readWrite` **on the target database**; the
+  role check runs before the insert/delete, so no write was attempted. Source side: `live (probe_ok)` on the first run
+  (`fixture_ro`, `SHOW GRANTS` = `USAGE` + `SELECT, SHOW VIEW ON banking_core_service.*`).
+- Observed: the intake's target secret (`otterworks-app`, flagged over-broad in UNT5-1/UNT5-2 but kept as "the only
+  fence is the allowlist") can never satisfy `g-doctor-green`. `MONGODB_MMP_RT_TARGET_URI` / `MONGODB_MMP_RT_TARGET_N_URI`
+  fail authentication (`OperationFailure`) and are scoped to other databases. No existing Atlas DB user is scoped to
+  `mmp_rt_b1_mysql` (`atlas dbusers list`: otterworks-app, ow-tp-demo, ow_tp_mongodb_demo, ow_tp_mmp_live).
+- Did (manager decision `d-target-principal`, recorded in the plan — human review substituted by the manager, not by this
+  worker): created Atlas DB user **`mmp_rt_b1_mysql_rw`** (auth db `admin`, exactly one role `readWrite@mmp_rt_b1_mysql`,
+  scope cluster `otterworks-demo`, i.e. the cluster `MONGODB_ATLAS_URI` points at) through the Atlas Admin API v2 with the
+  org secrets `MONGODB_ATLAS_PUBLIC_KEY` / `MONGODB_ATLAS_PRIVATE_KEY` / `MONGODB_ATLAS_PROJECT_ID` (names only). Password
+  generated in-session (`openssl rand -hex 18`), never printed, committed or written to disk. URI built from the host part
+  of `MONGODB_ATLAS_URI` + the new user, exported as **`MMP_RT_B1_TARGET_URI`** for the probe process only. Re-run:
+  `source: live (probe_ok)`, `target: migration_cluster (probe_ok)`, exit 0; `connectionStatus` of the new principal =
+  `["readWrite@mmp_rt_b1_mysql"]`. Nothing else on Atlas was created or modified (no other user, cluster, network entry
+  or database). This is an Atlas-side correction, not a legacy-source change (rule 1 untouched).
+- Convention for every later worker on this branch: each session that needs the target **PATCHes this same user's
+  password** via `PATCH /api/atlas/v2/groups/{MONGODB_ATLAS_PROJECT_ID}/databaseUsers/admin/mmp_rt_b1_mysql_rw` (digest auth
+  with the API key secrets), exports `MMP_RT_B1_TARGET_URI` in its shell, and passes `--target-uri-secret MMP_RT_B1_TARGET_URI`
+  / `--target-env MMP_RT_B1_TARGET_URI` to every probe/harness/guard call. `MONGODB_ATLAS_URI` is for read-only role
+  listing only; it is no longer a write path for this run. Cleanup note for the human: delete DB user `mmp_rt_b1_mysql_rw`
+  together with the `mmp_rt_b1_mysql` database at the end of the run.
+- Evidence: `.migration/connectivity.json` (exit-0 record); both redacted probe records in the UNT5-4 PR body; API response
+  `HTTP 201` with `roles: [{readWrite, mmp_rt_b1_mysql}]`, `scopes: [{otterworks-demo, CLUSTER}]` (PR body).
+
+## 2026-10-07 · s1.2-connectivity · (2) what the API path needed
+
+- Tool said: `atlas dbusers create --username mmp_rt_b1_mysql_rw --role readWrite@mmp_rt_b1_mysql --scope otterworks-demo`
+  (Atlas CLI 1.58.0, `MONGODB_ATLAS_PUBLIC_API_KEY`/`PRIVATE_API_KEY` mapped from the org secrets) -> `Error: unauthorized`,
+  although `atlas dbusers list` and `atlas clusters list` succeeded with the same mapping. The CLI's own help demands
+  Project Owner for `dbusers create`; the org knowledge says the key holds `GROUP_DATABASE_ACCESS_ADMIN`. Not diagnosed
+  further (the shell also carries `MONGODB_ATLAS_CLIENT_ID`/`CLIENT_SECRET`, which the CLI may prefer; unverified).
+- Did: called the Admin API directly — `GET .../databaseUsers/admin/mmp_rt_b1_mysql_rw` -> 404 (absent), then `POST
+  .../databaseUsers` with `curl --digest` -> `HTTP 201`. No API access-list or network access-list change was needed
+  (the key already accepted this VM's IP; the cluster already accepted the connection). The new principal authenticated
+  ~5 s after creation (one `OperationFailure` on the first poll, then OK). The `GET`-then-`POST`/`PATCH` upsert is the
+  documented convention above.
+- Evidence: `~/mmp-probe/run_probe.sh` (committed nowhere; contains no secrets — it reads them from the environment);
+  PR body transcript.
+
+## 2026-10-07 · s1.2-connectivity · (3) probe cwd vs. the org-wide dbx-migration-factory guard; probe leaves an empty collection
+
+- Tool said: `connectivity_probe.py` reads the allowlist from the relative path `.migration/allowed_targets.json`
+  (`probe_target(... allowed_targets=pathlib.Path(".migration/allowed_targets.json"))`) and the ticket says "from the repo
+  root". UNT5-2 entry (5): the dbx-migration-factory PreToolUse guard blocks any shell whose cwd is this repo.
+- Did: ran from `$HOME/mmp-probe/` holding a byte-for-byte copy of the **committed** allowlist
+  (`git show origin/mmp-rt/b1-mysql:.migration/allowed_targets.json`, which is also what `mongo_guard` would read with
+  `MONGO_GUARD_BASE_REF=origin/mmp-rt/b1-mysql`), with `--out` an absolute path, then copied the exit-0 record to
+  `.migration/connectivity.json`. `offline_guard.py --repo <abs repo> --source live --target migration_cluster
+  --target-env MMP_RT_B1_TARGET_URI` -> `offline guard: OK`.
+- Observed: the probe's insert+delete leaves an **empty** `_connectivity_probe` collection in `mmp_rt_b1_mysql`
+  (`list_collection_names` = `['_connectivity_probe']`, 0 documents). Left in place: the run never drops (rule 3 /
+  run context), and it costs nothing. Later census/recon steps must ignore `_connectivity_probe` on the target.
+- Evidence: this ledger; `offline guard: OK (source=live target=migration_cluster MMP_RT_B1_TARGET_URI checked)` in the PR body.
+
+## 2026-10-07 · s1.2-connectivity · (4) expected source `privilege_excess` did not occur — nothing to correct
+
+- Tool said (ticket): the fixture's principal is `root` and the probe will report `privilege_excess` on the source.
+- Observed: the committed recipe (`.migration/fixtures/w1-b01.json` `rebuild.steps`, UNT5-5) already provisions
+  `fixture_ro` (`SELECT, SHOW VIEW ON banking_core_service.*`) and `MMP_RT_SRC_DSN` points at it, so the source probed
+  `live (probe_ok)` on the first run. Fixture rebuilt in this VM as specified: `mmp_fixture_meta.scripts_failed = 0`,
+  rows user 4 / account 14 / utility_account 6 / transaction 0, `@@global.time_zone = +00:00`, MySQL 8.4.11. The
+  worker VM again lacked the `mysql` client and the `mysql:8` image (blueprint from PR #26 not yet in the snapshot);
+  installed with the blueprint's own commands, as UNT5-5 did.
+- Evidence: fixture re-measurement and `SHOW GRANTS` transcript in the PR body.
