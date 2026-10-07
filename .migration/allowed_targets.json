@@ -1,0 +1,1 @@
+{"databases": ["mmp_rt_b1_mysql"], "mode": "block", "legacy_hosts": ["127.0.0.1"], "legacy_dsn_secrets": ["MMP_RT_SRC_DSN"]}
