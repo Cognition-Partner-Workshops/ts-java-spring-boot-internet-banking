@@ -1,0 +1,662 @@
+{
+  "access_version": 1,
+  "census_sha256": "646ab3586f8543c2b26694cf2220895bb5f23dffa8b3f004020a08cfd4b5263f",
+  "review": {
+    "method": "access_scan.py (mongo-migration 0.7.0) returned 0 candidates for core-banking-service/src/main/java; every pattern below was hand-collected from the cited lines and self-confirmed by the worker (unattended run, no named reviewer) \u2014 see .migration/05_decisions.md s2.2-access-patterns.",
+    "paths": "source.file and callers[].file are repo-relative",
+    "frequency_scale": {
+      "hot": "per fund transfer / utility payment",
+      "warm": "per user read / registration",
+      "cold": "admin or unused-by-siblings HTTP reads"
+    },
+    "out_of_scope": {
+      "mmp_fixture_meta": "fixture scaffolding listed in census.json; no application code references it, no access pattern recorded (UNT5-6 entry 1)."
+    },
+    "write_only_tables": [
+      "banking_core_transaction"
+    ],
+    "never_written_by_app": [
+      "banking_core_user",
+      "banking_core_utility_account"
+    ]
+  },
+  "patterns": [
+    {
+      "id": "ap-caf6a913b3",
+      "op": "read",
+      "tables": [
+        "banking_core_user"
+      ],
+      "join_edges": [],
+      "filter": [
+        {
+          "col": "banking_core_user.identification_number",
+          "op": "eq"
+        }
+      ],
+      "sort": [],
+      "frequency": "warm",
+      "confirmed": true,
+      "source": {
+        "file": "core-banking-service/src/main/java/com/javatodev/finance/repository/UserRepository.java",
+        "lines": [
+          10,
+          10
+        ]
+      },
+      "statement": "UserRepository.findByIdentificationNumber(identificationNumber) -> SELECT ... FROM banking_core_user WHERE identification_number = ?",
+      "kind": "jpa_derived_query",
+      "callers": [
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/UserService.java",
+          "lines": [
+            24,
+            27
+          ],
+          "what": "readUser(identification)"
+        },
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/controller/UserController.java",
+          "lines": [
+            29,
+            32
+          ],
+          "what": "GET /api/v1/user/{identification}"
+        },
+        {
+          "file": "internet-banking-user-service/src/main/java/com/javatodev/finance/service/rest/BankingCoreRestClient.java",
+          "lines": [
+            9,
+            13
+          ],
+          "what": "@FeignClient(core-banking-service) readUser -> GET /api/v1/user/{identification}"
+        },
+        {
+          "file": "internet-banking-user-service/src/main/java/com/javatodev/finance/service/UserService.java",
+          "lines": [
+            40,
+            40
+          ],
+          "what": "createUser: one call per user registration"
+        }
+      ],
+      "note": "identification_number has no index and no UNIQUE in the DDL (census: indexes are FK-backing only); Optional<> return means the app assumes at most one row. Index candidate on the user collection."
+    },
+    {
+      "id": "ap-ff1a459bf5",
+      "op": "read",
+      "tables": [
+        "banking_core_user"
+      ],
+      "join_edges": [],
+      "filter": [],
+      "sort": [],
+      "frequency": "cold",
+      "confirmed": true,
+      "source": {
+        "file": "core-banking-service/src/main/java/com/javatodev/finance/service/UserService.java",
+        "lines": [
+          29,
+          31
+        ]
+      },
+      "statement": "UserRepository.findAll(pageable) -> SELECT ... FROM banking_core_user ORDER BY <Pageable sort> LIMIT ? OFFSET ?",
+      "kind": "jpa_findAll_pageable",
+      "callers": [
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/controller/UserController.java",
+          "lines": [
+            35,
+            38
+          ],
+          "what": "GET /api/v1/user?page=&size=&sort= (no sibling-service consumer)"
+        }
+      ],
+      "note": "Sort is caller-supplied (Pageable), none by default. UserMapper.convertToDto then lazily loads accounts per user (N+1)."
+    },
+    {
+      "id": "ap-c0f0ff167d",
+      "op": "read",
+      "tables": [
+        "banking_core_account"
+      ],
+      "join_edges": [],
+      "filter": [
+        {
+          "col": "banking_core_account.number",
+          "op": "eq"
+        }
+      ],
+      "sort": [],
+      "frequency": "hot",
+      "confirmed": true,
+      "source": {
+        "file": "core-banking-service/src/main/java/com/javatodev/finance/repository/BankAccountRepository.java",
+        "lines": [
+          10,
+          10
+        ]
+      },
+      "statement": "BankAccountRepository.findByNumber(accountNumber) -> SELECT ... FROM banking_core_account WHERE number = ?",
+      "kind": "jpa_derived_query",
+      "callers": [
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/AccountService.java",
+          "lines": [
+            27,
+            30
+          ],
+          "what": "readBankAccount(accountNumber)"
+        },
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/controller/AccountController.java",
+          "lines": [
+            26,
+            30
+          ],
+          "what": "GET /api/v1/account/bank-account/{account_number}"
+        },
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+          "lines": [
+            37,
+            38
+          ],
+          "what": "fundTransfer: from + to account by number (via AccountService)"
+        },
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+          "lines": [
+            87,
+            88
+          ],
+          "what": "internalFundTransfer: from + to entity by number (again)"
+        },
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+          "lines": [
+            52,
+            52
+          ],
+          "what": "utilPayment: from account by number (via AccountService)"
+        },
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+          "lines": [
+            59,
+            59
+          ],
+          "what": "utilPayment: from entity by number (again)"
+        },
+        {
+          "file": "internet-banking-fund-transfer-service/src/main/java/com/javatodev/finance/service/rest/client/BankingCoreFeignClient.java",
+          "lines": [
+            14,
+            18
+          ],
+          "what": "@FeignClient(core-banking-service) readAccount -> GET /api/v1/account/bank-account/{account_number}"
+        },
+        {
+          "file": "internet-banking-utility-payment-service/src/main/java/com/javatodev/finance/service/rest/BankingCoreRestClient.java",
+          "lines": [
+            14,
+            18
+          ],
+          "what": "@FeignClient(core-banking-service) readAccount -> GET /api/v1/account/bank-account/{account_number}"
+        }
+      ],
+      "note": "Dominant lookup: 4 lookups per fund transfer, 2 per utility payment, plus the HTTP read used by both sibling services. `number` has no index and no UNIQUE in the DDL; the app treats it as the account's natural key (Optional<> return, orElseThrow). Unique-index candidate on the account collection. type/status are @Enumerated(STRING) (BankAccountEntity.java:24-28): domains AccountType{SAVINGS_ACCOUNT,FIXED_DEPOSIT,LOAN_ACCOUNT}, AccountStatus{PENDING,ACTIVE,DORMANT,BLOCKED} stored as the enum names in VARCHAR(255)."
+    },
+    {
+      "id": "ap-959128234d",
+      "op": "read",
+      "tables": [
+        "banking_core_user",
+        "banking_core_account"
+      ],
+      "join_edges": [
+        [
+          "banking_core_user",
+          "banking_core_account"
+        ]
+      ],
+      "filter": [],
+      "sort": [],
+      "frequency": "hot",
+      "confirmed": true,
+      "source": {
+        "file": "core-banking-service/src/main/java/com/javatodev/finance/model/entity/BankAccountEntity.java",
+        "lines": [
+          34,
+          36
+        ]
+      },
+      "statement": "banking_core_account -> banking_core_user (BankAccountEntity.user @ManyToOne @JoinColumn(user_id), default EAGER)",
+      "kind": "orm_association",
+      "callers": [
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/AccountService.java",
+          "lines": [
+            28,
+            29
+          ],
+          "what": "every findByNumber joins/loads the owning user row"
+        },
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/model/mapper/BankAccountMapper.java",
+          "lines": [
+            23,
+            23
+          ],
+          "what": "copyProperties(entity, dto, \"user\"): the loaded user is discarded"
+        }
+      ],
+      "note": "@ManyToOne defaults to EAGER, so each account lookup also reads banking_core_user by id; the DTO mapper drops it. On the document side the account needs only a user_id reference, not an embedded user."
+    },
+    {
+      "id": "ap-dfe8974af9",
+      "op": "read",
+      "tables": [
+        "banking_core_user",
+        "banking_core_account"
+      ],
+      "join_edges": [
+        [
+          "banking_core_user",
+          "banking_core_account"
+        ]
+      ],
+      "filter": [],
+      "sort": [],
+      "frequency": "warm",
+      "confirmed": true,
+      "source": {
+        "file": "core-banking-service/src/main/java/com/javatodev/finance/model/entity/UserEntity.java",
+        "lines": [
+          24,
+          25
+        ]
+      },
+      "statement": "banking_core_user -> banking_core_account (UserEntity.accounts @OneToMany(mappedBy=user, LAZY, cascade=ALL)) -> SELECT ... FROM banking_core_account WHERE user_id = ?",
+      "kind": "orm_association",
+      "callers": [
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/model/mapper/UserMapper.java",
+          "lines": [
+            26,
+            26
+          ],
+          "what": "convertToDto calls entity.getAccounts(): lazy load fires inside open-in-view"
+        },
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/UserService.java",
+          "lines": [
+            24,
+            31
+          ],
+          "what": "readUser and readUsers both go through UserMapper.convertToDto"
+        }
+      ],
+      "note": "Accounts are read together with the user on every user read (GET /api/v1/user/{identification} returns bankAccounts[]). cascade=ALL is declared but no code path persists a UserEntity (no create/update user endpoint in core-banking-service). FK-backing index FKt5uqy9p0v3rp3yhlgvm7ep0ij(user_id) serves this read."
+    },
+    {
+      "id": "ap-57be51b5c5",
+      "op": "read",
+      "tables": [
+        "banking_core_utility_account"
+      ],
+      "join_edges": [],
+      "filter": [
+        {
+          "col": "banking_core_utility_account.provider_name",
+          "op": "eq"
+        }
+      ],
+      "sort": [],
+      "frequency": "cold",
+      "confirmed": true,
+      "source": {
+        "file": "core-banking-service/src/main/java/com/javatodev/finance/repository/UtilityAccountRepository.java",
+        "lines": [
+          10,
+          10
+        ]
+      },
+      "statement": "UtilityAccountRepository.findByProviderName(provider) -> SELECT ... FROM banking_core_utility_account WHERE provider_name = ?",
+      "kind": "jpa_derived_query",
+      "callers": [
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/AccountService.java",
+          "lines": [
+            32,
+            35
+          ],
+          "what": "readUtilityAccount(provider)"
+        },
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/controller/AccountController.java",
+          "lines": [
+            33,
+            37
+          ],
+          "what": "GET /api/v1/account/util-account/{account_name}"
+        }
+      ],
+      "note": "Exposed over HTTP only; neither sibling service calls it (utility-payment resolves the provider by id). provider_name has no index/UNIQUE; Optional<> return assumes at most one row per provider."
+    },
+    {
+      "id": "ap-ec3e2706cd",
+      "op": "read",
+      "tables": [
+        "banking_core_utility_account"
+      ],
+      "join_edges": [],
+      "filter": [
+        {
+          "col": "banking_core_utility_account.id",
+          "op": "eq"
+        }
+      ],
+      "sort": [],
+      "frequency": "hot",
+      "confirmed": true,
+      "source": {
+        "file": "core-banking-service/src/main/java/com/javatodev/finance/service/AccountService.java",
+        "lines": [
+          37,
+          39
+        ]
+      },
+      "statement": "UtilityAccountRepository.findById(id) -> SELECT ... FROM banking_core_utility_account WHERE id = ?",
+      "kind": "jpa_findById",
+      "callers": [
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+          "lines": [
+            57,
+            57
+          ],
+          "what": "utilPayment: readUtilityAccount(providerId), one per payment"
+        }
+      ],
+      "note": "Primary-key lookup; the result is only existence-checked (orElseThrow), nothing from it is written."
+    },
+    {
+      "id": "ap-747765bf86",
+      "op": "write",
+      "tables": [
+        "banking_core_account"
+      ],
+      "join_edges": [],
+      "filter": [
+        {
+          "col": "banking_core_account.id",
+          "op": "eq"
+        }
+      ],
+      "sort": [],
+      "frequency": "hot",
+      "confirmed": true,
+      "source": {
+        "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+        "lines": [
+          87,
+          92
+        ]
+      },
+      "statement": "internalFundTransfer debit: UPDATE banking_core_account SET actual_balance = ?, available_balance = ? WHERE id = ?",
+      "kind": "service_write",
+      "callers": [
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/controller/TransactionController.java",
+          "lines": [
+            28,
+            34
+          ],
+          "what": "POST /api/v1/transaction/fund-transfer"
+        },
+        {
+          "file": "internet-banking-fund-transfer-service/src/main/java/com/javatodev/finance/service/FundTransferService.java",
+          "lines": [
+            39,
+            39
+          ],
+          "what": "bankingCoreFeignClient.fundTransfer(request), one per transfer"
+        }
+      ],
+      "note": "actual_balance -= amount (L90); available_balance = new actual_balance - amount (L91), i.e. available ends 2*amount below the pre-transfer actual. Explicit bankAccountRepository.save (L92) inside the class-level @Transactional (L27). Recon tier-4 note: the two balance columns are not kept equal by the app."
+    },
+    {
+      "id": "ap-c8311a4a99",
+      "op": "write",
+      "tables": [
+        "banking_core_transaction"
+      ],
+      "join_edges": [],
+      "filter": [],
+      "sort": [],
+      "frequency": "hot",
+      "confirmed": true,
+      "source": {
+        "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+        "lines": [
+          94,
+          97
+        ]
+      },
+      "statement": "internalFundTransfer debit leg: INSERT INTO banking_core_transaction (amount, transaction_type, reference_number, transaction_id, account_id) VALUES (-amount, ?, toAccount.number, uuid, fromAccount.id)",
+      "kind": "service_write",
+      "callers": [
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/controller/TransactionController.java",
+          "lines": [
+            28,
+            34
+          ],
+          "what": "POST /api/v1/transaction/fund-transfer"
+        }
+      ],
+      "note": "transaction_type is @Enumerated(STRING) (TransactionEntity.java:25-26): domain TransactionType{FUND_TRANSFER,UTILITY_PAYMENT} stored as the enum name in VARCHAR(30). reference_number carries the counterparty account number."
+    },
+    {
+      "id": "ap-f6314d0ef8",
+      "op": "write",
+      "tables": [
+        "banking_core_account"
+      ],
+      "join_edges": [],
+      "filter": [
+        {
+          "col": "banking_core_account.id",
+          "op": "eq"
+        }
+      ],
+      "sort": [],
+      "frequency": "hot",
+      "confirmed": true,
+      "source": {
+        "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+        "lines": [
+          99,
+          101
+        ]
+      },
+      "statement": "internalFundTransfer credit: UPDATE banking_core_account SET actual_balance = ?, available_balance = ? WHERE id = ?",
+      "kind": "service_write",
+      "callers": [
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/controller/TransactionController.java",
+          "lines": [
+            28,
+            34
+          ],
+          "what": "POST /api/v1/transaction/fund-transfer"
+        }
+      ],
+      "note": "actual_balance += amount (L99); available_balance = new actual_balance + amount (L100). Explicit save (L101)."
+    },
+    {
+      "id": "ap-f203a1ea0e",
+      "op": "write",
+      "tables": [
+        "banking_core_transaction"
+      ],
+      "join_edges": [],
+      "filter": [],
+      "sort": [],
+      "frequency": "hot",
+      "confirmed": true,
+      "source": {
+        "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+        "lines": [
+          103,
+          106
+        ]
+      },
+      "statement": "internalFundTransfer credit leg: INSERT INTO banking_core_transaction (amount, transaction_type, reference_number, transaction_id, account_id) VALUES (+amount, ?, toAccount.number, uuid, toAccount.id)",
+      "kind": "service_write",
+      "callers": [
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/controller/TransactionController.java",
+          "lines": [
+            28,
+            34
+          ],
+          "what": "POST /api/v1/transaction/fund-transfer"
+        }
+      ],
+      "note": "Second row with the same transaction_id as the debit leg: transaction_id is a per-transfer correlation id, not unique per row (no UNIQUE in the DDL either)."
+    },
+    {
+      "id": "ap-0cd499fe1d",
+      "op": "write",
+      "tables": [
+        "banking_core_account"
+      ],
+      "join_edges": [],
+      "filter": [
+        {
+          "col": "banking_core_account.id",
+          "op": "eq"
+        }
+      ],
+      "sort": [],
+      "frequency": "hot",
+      "confirmed": true,
+      "source": {
+        "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+        "lines": [
+          59,
+          64
+        ]
+      },
+      "statement": "utilPayment debit: UPDATE banking_core_account SET actual_balance = ?, available_balance = ? WHERE id = ?",
+      "kind": "service_write",
+      "callers": [
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/controller/TransactionController.java",
+          "lines": [
+            37,
+            43
+          ],
+          "what": "POST /api/v1/transaction/util-payment"
+        },
+        {
+          "file": "internet-banking-utility-payment-service/src/main/java/com/javatodev/finance/service/UtilityPaymentService.java",
+          "lines": [
+            39,
+            39
+          ],
+          "what": "bankingCoreRestClient.utilityPayment(paymentRequest), one per payment"
+        }
+      ],
+      "note": "No explicit bankAccountRepository.save on this path: the managed entity is flushed by Hibernate dirty checking at commit of the class-level @Transactional (L27) and also reached by TransactionEntity.account cascade=ALL (TransactionEntity.java:32). Same available = actual - 2*amount arithmetic as the transfer debit."
+    },
+    {
+      "id": "ap-706e6c275b",
+      "op": "write",
+      "tables": [
+        "banking_core_transaction"
+      ],
+      "join_edges": [],
+      "filter": [],
+      "sort": [],
+      "frequency": "hot",
+      "confirmed": true,
+      "source": {
+        "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+        "lines": [
+          66,
+          70
+        ]
+      },
+      "statement": "utilPayment: INSERT INTO banking_core_transaction (amount, transaction_type, reference_number, transaction_id, account_id) VALUES (-amount, ?, request.referenceNumber, uuid, fromAccount.id)",
+      "kind": "service_write",
+      "callers": [
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/controller/TransactionController.java",
+          "lines": [
+            37,
+            43
+          ],
+          "what": "POST /api/v1/transaction/util-payment"
+        }
+      ],
+      "note": "One row per payment; reference_number here is the caller-supplied bill reference, not an account number."
+    },
+    {
+      "id": "ap-9925ea846a",
+      "op": "write",
+      "tables": [
+        "banking_core_account",
+        "banking_core_transaction"
+      ],
+      "join_edges": [
+        [
+          "banking_core_account",
+          "banking_core_transaction"
+        ]
+      ],
+      "filter": [],
+      "sort": [],
+      "frequency": "hot",
+      "confirmed": true,
+      "source": {
+        "file": "core-banking-service/src/main/java/com/javatodev/finance/model/entity/TransactionEntity.java",
+        "lines": [
+          32,
+          34
+        ]
+      },
+      "statement": "banking_core_transaction -> banking_core_account (TransactionEntity.account @OneToOne(cascade=ALL) @JoinColumn(account_id)): every INSERT sets account_id = account.id",
+      "kind": "orm_association",
+      "callers": [
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+          "lines": [
+            67,
+            67
+          ],
+          "what": ".account(fromAccount) utility payment"
+        },
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+          "lines": [
+            97,
+            97
+          ],
+          "what": ".account(fromBankAccountEntity) debit leg"
+        },
+        {
+          "file": "core-banking-service/src/main/java/com/javatodev/finance/service/TransactionService.java",
+          "lines": [
+            106,
+            106
+          ],
+          "what": ".account(toBankAccountEntity) credit leg"
+        }
+      ],
+      "note": "JPA-vs-DDL cardinality conflict: JPA declares @OneToOne, but the DDL has a plain non-unique FK (V1.0.20210429210839__create_transaction_table.sql:11-12: KEY + FOREIGN KEY account_id, no UNIQUE) and the service appends a new transaction row per transfer leg / payment for the same account, so the data is 1:N account -> transaction (census relationship FKk9w2ogq595jbe8r2due7vv3xr). Hibernate never enforces the 1:1 on insert (no unique constraint generated: ddl-auto is not used, schema is Flyway). No code path reads TransactionEntity.account or any transaction at all: TransactionRepository has no finders and no controller exposes transactions, so banking_core_transaction is append-only/write-only inside core-banking-service."
+    }
+  ]
+}

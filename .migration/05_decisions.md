@@ -346,3 +346,78 @@ what was done, evidence. Nothing here authorizes a write: write scope is `.migra
 - Did: every command ran from `$HOME` with absolute paths / `git -C`; `--out` absolute; the census was written to
   `$HOME/mmp-census/` and copied into `.migration/`. No shell was blocked by the dbx-migration-factory guard.
 - Evidence: this session's command log; UNT5-5 / UNT5-3 (2) / UNT5-4 (4) entries above.
+
+## 2026-10-07 · s2.2-access-patterns · (1) `access_scan.py` is blind to this code base: 0 candidates on a tree with 14 real patterns
+
+- Tool said: `python3 <plugin>/skills/schema-modeling/access_scan.py --root core-banking-service/src/main/java --census
+  .migration/census.json --out .migration/access_patterns.json` (plugin 0.7.0 at `caeb34d`) -> exit 0,
+  `0 candidates (0 confirmed)`, `patterns: []`.
+- Observed, by reading `_orm_candidates` and replaying its regexes on the three entities: (a) the owner regex
+  `@Table\s*\(name="…"\)|@Entity\b[^;{]*?\bclass\s+(\w+)` is tried left-to-right, and because every entity here is written
+  `@Entity` *then* `@Table(name = …)` *then* `class XEntity`, the `@Entity … class` alternative matches first and swallows the
+  `@Table` name; the owner is then resolved from the class name `BankAccountEntity` -> `bank_account_entity(s)`, which is not a
+  census table, so `owner = None` and nothing is emitted. (b) The association target is resolved the same way from the field
+  type (`List<BankAccountEntity>`, `UserEntity user`): there is no cross-file class -> `@Table` map, so `*Entity` classes mapped to
+  `banking_core_*` tables never resolve. (c) By design the scanner only sees SQL string literals, MyBatis XML, `.sql` files and
+  ORM associations: Spring Data derived queries (`findByNumber`, `findByIdentificationNumber`, `findByProviderName`, `findById`,
+  `findAll(Pageable)`) and service-level writes (`repository.save`, dirty-checked updates under `@Transactional`) are invisible.
+  The Flyway `.sql` files are under `src/main/resources`, outside the given root, and are DDL anyway.
+- Did: hand-collected every access pattern from the code (3 repositories, 3 services, 3 controllers, 4 entities, 3 mappers, plus the
+  three sibling services' Feign clients as callers) and wrote `.migration/access_patterns.json` in the scanner's own contract
+  (`access_version 1`, `census_sha256` pinned to the merged census, ids from `access_scan._pid`, statements through
+  `access_scan._normalize`), validated with `access_scan.validate_access` -> 0 errors. 14 patterns, 14 `confirmed`, every one with
+  `frequency` and `source.file/lines` (repo-relative) plus a `callers` list. The generator script lives outside the repo
+  (`/home/ubuntu/mmp-access/build_access_patterns.py`); the JSON is the deliverable.
+- Evidence: PR body (each pattern with file:line); `.migration/access_patterns.json` `review.method`.
+
+## 2026-10-07 · s2.2-access-patterns · (2) a rerun of `access_scan.py` over the committed file drops all 14 entries
+
+- Tool said (`merge_rerun`): reviewer edits survive only on candidates the scanner re-finds (`confirmed`/`frequency`/`note` by id),
+  or on entries whose `source` has a `customer` key; everything else is `dropped (no longer found)`.
+- Observed: `access_scan.py … --out <copy of the committed file>` -> 14 × `dropped (no longer found): ap-…`, `0 candidates`,
+  `patterns: []`. Since the scanner finds nothing here, a rerun erases the whole deliverable.
+- Did: did **not** tag the entries `source.customer` to game the merge (they are code citations, not customer quotes). The file is
+  hand-maintained for this run: regenerate it from the cited lines, never `access_scan.py --out .migration/access_patterns.json`.
+  Downstream, `model_proposal.py --access-patterns` only checks `census_sha256` and the contract, so the file is consumed as-is.
+  Plugin fix suggested (not applied here): try the `@Table` alternative first / build a class->`@Table` map across files, add Spring
+  Data derived-query parsing, and let `merge_rerun` keep `confirmed: true` entries that carry `source.file`.
+- Evidence: rerun transcript in the PR body.
+
+## 2026-10-07 · s2.2-access-patterns · (3) reviewer confirmation substituted by the worker (unattended run)
+
+- Ticket said: every entry `confirmed` with `frequency` and a code citation; no reviewer named.
+- Did: the worker set `confirmed: true` and `frequency` on all 14 entries from the cited lines alone. Frequency scale used (also in
+  the file's `review.frequency_scale`): `hot` = on the fund-transfer / utility-payment write paths (`POST /api/v1/transaction/*`,
+  called by the fund-transfer and utility-payment services over Feign); `warm` = per user read (`GET /api/v1/user/{identification}`,
+  called by the user service on every registration); `cold` = HTTP reads with no sibling-service consumer (`findAll(Pageable)`,
+  `findByProviderName`). No production traffic numbers exist for this fixture-backed run; the scale is a code-path ranking, not a
+  measurement. A human reviewer may re-grade any `frequency` without touching the citations.
+- Evidence: `.migration/access_patterns.json` `review` block; this entry.
+
+## 2026-10-07 · s2.2-access-patterns · (4) findings for the model step that the scanner could not raise
+
+- `TransactionEntity.account` is `@OneToOne(cascade = ALL) @JoinColumn(account_id)` (TransactionEntity.java:32-34) while the DDL has a
+  plain non-unique FK + KEY (`V1.0.20210429210839__create_transaction_table.sql:11-12`) and `TransactionService` appends 2 rows per
+  transfer (debit + credit legs, TransactionService.java:94-106) and 1 per payment (:66-70) against the same accounts: the data is
+  1:N account -> transaction, the JPA annotation is wrong, and the census relationship `FKk9w2ogq595jbe8r2due7vv3xr` (1:N, assumed)
+  is the one to trust. Recorded as pattern `ap-9925ea846a`.
+- `banking_core_transaction` is write-only inside core-banking-service: `TransactionRepository` has no finders and no controller reads
+  transactions. `banking_core_user` and `banking_core_utility_account` are never written by the application (seed-only).
+- No non-FK index exists on any lookup column: `banking_core_account.number` (hot, 4 lookups per transfer), `banking_core_user.identification_number`
+  (warm), `banking_core_utility_account.provider_name` (cold); none has a UNIQUE either, although every finder returns `Optional<>`.
+  Dry run `model_proposal.py --access-patterns` (output in `/home/ubuntu/mmp-access/`, not committed) turns them into index proposals
+  `bankingCoreAccount{number}`, `bankingCoreUser{identificationNumber}`, plus FK references `bankingCoreAccount{userId}`,
+  `bankingCoreTransaction{accountId}`; the account -> transaction edge becomes `reference / derived / child_written_alone` citing
+  `ap-c8311a4a99, ap-f203a1ea0e, ap-706e6c275b`; the user -> account edge stays `shared_child / reference / assumed` because the DDL
+  rule fires before the access rules — the model step should restate it as `reference` with basis `derived` citing `ap-c0f0ff167d`
+  (accounts are resolved alone by number on every hot path) and `ap-dfe8974af9` (read together on the warm user path).
+- Balance arithmetic for recon Tier 4: both debit paths set `available_balance = (actual_balance - amount) - amount`
+  (TransactionService.java:90-91, 63-64) and the credit path `(actual_balance + amount) + amount` (:99-100), so the two balance
+  columns are **not** kept equal; parity must compare each column, not derive one from the other. The utility-payment debit has no
+  explicit `save` (flushed by dirty checking / cascade), so a Mongo port must write the account update explicitly.
+- `@Enumerated(STRING)`: `banking_core_account.type` ∈ {SAVINGS_ACCOUNT, FIXED_DEPOSIT, LOAN_ACCOUNT}, `.status` ∈ {PENDING, ACTIVE,
+  DORMANT, BLOCKED}, `banking_core_transaction.transaction_type` ∈ {FUND_TRANSFER, UTILITY_PAYMENT}: stored as enum names, carried
+  over as strings (no code-table translation).
+- `mmp_fixture_meta` (in the census, UNT5-6 entry 1): fixture scaffolding, referenced by no application code — no access pattern,
+  out of scope; the dry-run proposal still emits a `mmpFixtureMeta` collection that the model step must drop.
+- Evidence: `.migration/access_patterns.json`; cited lines; dry-run transcript in the PR body.
