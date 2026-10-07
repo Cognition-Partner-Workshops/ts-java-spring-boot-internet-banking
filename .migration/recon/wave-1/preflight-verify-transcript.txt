@@ -1,0 +1,36 @@
+preflight: warning: 05_decisions.md, data_profile.supplement.json, data_profile_supplement.py are not read by any tool; prose belongs on the plan step's ticket or in plan.yaml, not in .migration/
+{
+  "auto_merge": false,
+  "batches": [
+    {
+      "batch": "w1-b01",
+      "branch": "devin/1791339936-unt5-14-migrate-core-banking",
+      "failure_class": "",
+      "harness_merge_eligible": true,
+      "merge_eligible": true,
+      "one_line_summary": "core-banking: live PASS (migration_cluster, merge_eligible, 4 tiers, 0 findings); bankingCoreTransaction graded on 0 rows",
+      "pr_url": "https://github.com/Cognition-Partner-Workshops/ts-java-spring-boot-internet-banking/pull/39",
+      "recon_mode": "live",
+      "recon_results": [
+        ".migration/recon/core-banking/result.json"
+      ],
+      "recon_verdict": "PASS",
+      "status": "PASS",
+      "target_class": "migration_cluster",
+      "undeclared_write_targets": [],
+      "write_targets": [
+        "mmp_rt_b1_mysql.bankingCoreUser",
+        "mmp_rt_b1_mysql.bankingCoreAccount",
+        "mmp_rt_b1_mysql.bankingCoreUtilityAccount",
+        "mmp_rt_b1_mysql.bankingCoreTransaction"
+      ]
+    }
+  ],
+  "manifest_sha": "f672bf2f9220",
+  "mergeable_prs": [
+    "https://github.com/Cognition-Partner-Workshops/ts-java-spring-boot-internet-banking/pull/39"
+  ],
+  "verify_problems": [],
+  "wave": 1
+}
+wave 1 OK: 1 batches, manifest_sha f672bf2f9220

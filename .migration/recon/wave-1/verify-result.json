@@ -1,0 +1,7 @@
+{
+  "wave_verdict": "PASS",
+  "unit_verdicts": {"w1-b01": "PASS"},
+  "recon_results": {"w1-b01": [".migration/recon/wave-1/w1-b01/core-banking/result.json"]},
+  "findings": [],
+  "report_path": "recon/wave-1:.migration/recon/wave-1/verify-report.md"
+}

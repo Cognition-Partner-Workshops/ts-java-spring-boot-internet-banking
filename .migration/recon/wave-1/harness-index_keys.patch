@@ -1,0 +1,16 @@
+diff --git a/skills/mongo-recon-harness/harness/recon/adapters.py b/skills/mongo-recon-harness/harness/recon/adapters.py
+index 8c66ca4..1a8a7ba 100644
+--- a/skills/mongo-recon-harness/harness/recon/adapters.py
++++ b/skills/mongo-recon-harness/harness/recon/adapters.py
+@@ -284,9 +284,9 @@ class MongoTargetAdapter:
+             if ix.get("name") == "_id_":
+                 continue
+             key_items = list(ix["key"].items())
+-            if not all(v in (1, -1) for v in key_items.values()):
++            if not all(v in (1, -1) for _, v in key_items):
+                 continue
+-            out.append(IndexSpec(keys=tuple((k, v) for k, v in key_items.items()),
++            out.append(IndexSpec(keys=tuple((k, v) for k, v in key_items),
+                                  unique=bool(ix.get("unique"))))
+         return out
+ 

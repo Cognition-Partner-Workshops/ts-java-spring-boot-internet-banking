@@ -1,0 +1,206 @@
+{
+  "unit": "core-banking",
+  "mode": "live",
+  "target_class": "migration_cluster",
+  "mapping_version": "map-draft-3",
+  "mapping_sha256": "669b4e98932d00d893b249ba66fa88c9c44e89831b50d7370d85ff681a2a0c38",
+  "tolerance_version": "tol-1",
+  "tolerance_sha256": "8ea506ef76b192076c5f023d25fe3591f384a40d3e044e7743679ba5d11e690d",
+  "collections": [
+    "bankingCoreAccount",
+    "bankingCoreUser",
+    "bankingCoreTransaction",
+    "bankingCoreUtilityAccount"
+  ],
+  "seed": 1,
+  "params": {},
+  "snapshot": null,
+  "generated_at": "2026-10-07T03:00:36.121317+00:00",
+  "redacted": true,
+  "redaction_salted": true,
+  "tiers": [
+    {
+      "tier": 1,
+      "name": "counts_through_mapping",
+      "passed": true,
+      "checks_run": 9,
+      "stats": {
+        "source_counts": {
+          "bankingCoreAccount": 14,
+          "bankingCoreUser": 4,
+          "bankingCoreTransaction": 0,
+          "bankingCoreUtilityAccount": 6
+        }
+      },
+      "findings": []
+    },
+    {
+      "tier": 2,
+      "name": "per_field_aggregates",
+      "passed": true,
+      "checks_run": 5,
+      "stats": {
+        "deferred_to_tier3": [
+          "bankingCoreAccount.actualBalance",
+          "bankingCoreAccount.availableBalance",
+          "bankingCoreAccount.number",
+          "bankingCoreAccount.status",
+          "bankingCoreAccount.type",
+          "bankingCoreAccount.userId",
+          "bankingCoreUser.email",
+          "bankingCoreUser.firstName",
+          "bankingCoreUser.identificationNumber",
+          "bankingCoreUser.lastName",
+          "bankingCoreTransaction.amount",
+          "bankingCoreTransaction.transactionType",
+          "bankingCoreTransaction.referenceNumber",
+          "bankingCoreTransaction.transactionId",
+          "bankingCoreTransaction.accountId",
+          "bankingCoreUtilityAccount.number",
+          "bankingCoreUtilityAccount.providerName"
+        ],
+        "string_aggregates_deferred_to_tier3": [
+          {
+            "field": "bankingCoreAccount.number",
+            "stats": [
+              "min",
+              "max",
+              "distinct_count"
+            ]
+          },
+          {
+            "field": "bankingCoreAccount.status",
+            "stats": [
+              "min",
+              "max",
+              "distinct_count"
+            ]
+          },
+          {
+            "field": "bankingCoreAccount.type",
+            "stats": [
+              "min",
+              "max",
+              "distinct_count"
+            ]
+          },
+          {
+            "field": "bankingCoreUser.email",
+            "stats": [
+              "min",
+              "max",
+              "distinct_count"
+            ]
+          },
+          {
+            "field": "bankingCoreUser.firstName",
+            "stats": [
+              "min",
+              "max",
+              "distinct_count"
+            ]
+          },
+          {
+            "field": "bankingCoreUser.identificationNumber",
+            "stats": [
+              "min",
+              "max",
+              "distinct_count"
+            ]
+          },
+          {
+            "field": "bankingCoreUser.lastName",
+            "stats": [
+              "min",
+              "max",
+              "distinct_count"
+            ]
+          },
+          {
+            "field": "bankingCoreTransaction.transactionType",
+            "stats": [
+              "min",
+              "max",
+              "distinct_count"
+            ]
+          },
+          {
+            "field": "bankingCoreTransaction.referenceNumber",
+            "stats": [
+              "min",
+              "max",
+              "distinct_count"
+            ]
+          },
+          {
+            "field": "bankingCoreTransaction.transactionId",
+            "stats": [
+              "min",
+              "max",
+              "distinct_count"
+            ]
+          },
+          {
+            "field": "bankingCoreUtilityAccount.number",
+            "stats": [
+              "min",
+              "max",
+              "distinct_count"
+            ]
+          },
+          {
+            "field": "bankingCoreUtilityAccount.providerName",
+            "stats": [
+              "min",
+              "max",
+              "distinct_count"
+            ]
+          }
+        ],
+        "fields_fully_deferred": 12
+      },
+      "findings": []
+    },
+    {
+      "tier": 3,
+      "name": "keyed_diffs",
+      "passed": true,
+      "checks_run": 24,
+      "stats": {
+        "bankingCoreAccount": {
+          "mode": "full_diff",
+          "population": 14,
+          "duplicate_source_key_count": 0
+        },
+        "bankingCoreUser": {
+          "mode": "full_diff",
+          "population": 4,
+          "duplicate_source_key_count": 0
+        },
+        "bankingCoreTransaction": {
+          "mode": "full_diff",
+          "population": 0,
+          "duplicate_source_key_count": 0
+        },
+        "bankingCoreUtilityAccount": {
+          "mode": "full_diff",
+          "population": 6,
+          "duplicate_source_key_count": 0
+        }
+      },
+      "findings": []
+    },
+    {
+      "tier": 4,
+      "name": "app_level_parity",
+      "passed": true,
+      "checks_run": 7,
+      "stats": {},
+      "findings": []
+    }
+  ],
+  "warnings": [],
+  "verdict": "PASS",
+  "merge_eligible": true,
+  "error": null
+}

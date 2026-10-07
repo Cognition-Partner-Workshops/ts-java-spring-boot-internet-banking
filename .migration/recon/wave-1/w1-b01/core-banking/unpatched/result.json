@@ -1,0 +1,46 @@
+{
+  "unit": "core-banking",
+  "mode": "live",
+  "target_class": "migration_cluster",
+  "mapping_version": "map-draft-3",
+  "mapping_sha256": "669b4e98932d00d893b249ba66fa88c9c44e89831b50d7370d85ff681a2a0c38",
+  "tolerance_version": "tol-1",
+  "tolerance_sha256": "8ea506ef76b192076c5f023d25fe3591f384a40d3e044e7743679ba5d11e690d",
+  "collections": [
+    "bankingCoreAccount",
+    "bankingCoreUser",
+    "bankingCoreTransaction",
+    "bankingCoreUtilityAccount"
+  ],
+  "seed": 1,
+  "params": {},
+  "snapshot": null,
+  "generated_at": "2026-10-07T03:00:04.400195+00:00",
+  "redacted": true,
+  "redaction_salted": true,
+  "tiers": [
+    {
+      "tier": 1,
+      "name": "counts_through_mapping",
+      "passed": true,
+      "checks_run": 4,
+      "stats": {
+        "source_counts": {
+          "bankingCoreAccount": 14,
+          "bankingCoreUser": 4,
+          "bankingCoreTransaction": 0,
+          "bankingCoreUtilityAccount": 6
+        }
+      },
+      "findings": []
+    }
+  ],
+  "warnings": [],
+  "verdict": "ERROR",
+  "merge_eligible": false,
+  "error": {
+    "type": "AttributeError",
+    "message": "'list' object has no attribute 'values'",
+    "traceback": "omitted (redacted run)"
+  }
+}
