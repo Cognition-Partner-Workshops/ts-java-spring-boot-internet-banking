@@ -1,0 +1,185 @@
+{
+  "profile_version": 1,
+  "source_family": "mysql",
+  "census_sha256": "646ab3586f8543c2b26694cf2220895bb5f23dffa8b3f004020a08cfd4b5263f",
+  "as_of": "2026-10-07T01:27:48.506183+00:00",
+  "origin": "live",
+  "stats": [
+    {
+      "id": "fanout:banking_core_account->banking_core_user(user_id)",
+      "query_id": "fanout",
+      "subject": {
+        "parent": "banking_core_user",
+        "child": "banking_core_account",
+        "child_columns": [
+          "user_id"
+        ]
+      },
+      "sampled": false,
+      "sample_pct": null,
+      "sha256": "579f6d93c8d53899a5087fd6be6aa1efdbb8a368b2534e973140d7d1060ac13e",
+      "status": "ok",
+      "values": {
+        "parents": 4,
+        "parents_zero": 0,
+        "min": 2,
+        "p50": 3,
+        "p95": 5,
+        "p99": 5,
+        "max": 5
+      }
+    },
+    {
+      "id": "fk_integrity:banking_core_account->banking_core_user(user_id)",
+      "query_id": "fk_integrity",
+      "subject": {
+        "parent": "banking_core_user",
+        "child": "banking_core_account",
+        "child_columns": [
+          "user_id"
+        ]
+      },
+      "sampled": false,
+      "sample_pct": null,
+      "sha256": "0e34f5d1888140b8f2e98c91ef69377f24bda5d6dba8473c1666379aa4457be9",
+      "status": "ok",
+      "values": {
+        "child_rows": 14,
+        "null_fk": 0,
+        "orphans": 0
+      }
+    },
+    {
+      "id": "embed_bytes:banking_core_account->banking_core_user(user_id)",
+      "query_id": "embed_bytes",
+      "subject": {
+        "parent": "banking_core_user",
+        "child": "banking_core_account",
+        "child_columns": [
+          "user_id"
+        ]
+      },
+      "sampled": false,
+      "sample_pct": null,
+      "sha256": "d08e2a7997215add321ca7611a9d72bf2b80f9d65330c6a46337bdb8bb532bf3",
+      "status": "ok",
+      "values": {
+        "p50": 264,
+        "p99": 264,
+        "max": 264
+      }
+    },
+    {
+      "id": "row_bytes:banking_core_user",
+      "query_id": "row_bytes",
+      "subject": {
+        "table": "banking_core_user"
+      },
+      "sampled": false,
+      "sample_pct": null,
+      "sha256": "4d9d40fc85a663c55a89b130a8db0e96264656041e3b56476419f386ab18d252",
+      "status": "ok",
+      "values": {
+        "rows_seen": 4,
+        "avg_bytes": 36.0,
+        "max_bytes": 39.0
+      }
+    },
+    {
+      "id": "row_bytes:banking_core_account",
+      "query_id": "row_bytes",
+      "subject": {
+        "table": "banking_core_account"
+      },
+      "sampled": false,
+      "sample_pct": null,
+      "sha256": "8c9663e4a29c3b503c48ac0a56cbfe24d6e26eb2422984bef88b6e1a30e82420",
+      "status": "ok",
+      "values": {
+        "rows_seen": 14,
+        "avg_bytes": 52.7143,
+        "max_bytes": 54.0
+      }
+    },
+    {
+      "id": "fanout:banking_core_transaction->banking_core_account(account_id)",
+      "query_id": "fanout",
+      "subject": {
+        "parent": "banking_core_account",
+        "child": "banking_core_transaction",
+        "child_columns": [
+          "account_id"
+        ]
+      },
+      "sampled": false,
+      "sample_pct": null,
+      "sha256": "030091690963ec963731c76a949ad0acaa3db8922c15adf3729f33a48702f8ed",
+      "status": "ok",
+      "values": {
+        "parents": 14,
+        "parents_zero": 14,
+        "min": 0,
+        "p50": 0,
+        "p95": 0,
+        "p99": 0,
+        "max": 0
+      }
+    },
+    {
+      "id": "fk_integrity:banking_core_transaction->banking_core_account(account_id)",
+      "query_id": "fk_integrity",
+      "subject": {
+        "parent": "banking_core_account",
+        "child": "banking_core_transaction",
+        "child_columns": [
+          "account_id"
+        ]
+      },
+      "sampled": false,
+      "sample_pct": null,
+      "sha256": "7cf4e6e2fe2509fbe2c947bb7c5954a572ecab5883020715dc5ff6f397d51522",
+      "status": "ok",
+      "values": {
+        "child_rows": 0,
+        "null_fk": 0,
+        "orphans": 0
+      }
+    },
+    {
+      "id": "embed_bytes:banking_core_transaction->banking_core_account(account_id)",
+      "query_id": "embed_bytes",
+      "subject": {
+        "parent": "banking_core_account",
+        "child": "banking_core_transaction",
+        "child_columns": [
+          "account_id"
+        ]
+      },
+      "sampled": false,
+      "sample_pct": null,
+      "sha256": "91485cbeb2059ffa6d1cf0d569eb8d64601e52bff56170a2e0234d4e5078b598",
+      "status": "ok",
+      "values": {
+        "p50": 0.0,
+        "p99": 0.0,
+        "max": 0
+      }
+    },
+    {
+      "id": "row_bytes:banking_core_transaction",
+      "query_id": "row_bytes",
+      "subject": {
+        "table": "banking_core_transaction"
+      },
+      "sampled": false,
+      "sample_pct": null,
+      "sha256": "7d0a2865be8ba608fb5065ef4de340c0d0d7a20cb71a5009ac29580ec3712258",
+      "status": "ok",
+      "values": {
+        "rows_seen": 0,
+        "avg_bytes": null,
+        "max_bytes": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "profile_version": 1,
+  "source_family": "mysql",
+  "census_sha256": "646ab3586f8543c2b26694cf2220895bb5f23dffa8b3f004020a08cfd4b5263f",
+  "as_of": "2026-10-07T01:28:56.454105+00:00",
+  "origin": "live",
+  "stats": [
+    {
+      "id": "row_bytes:banking_core_utility_account",
+      "query_id": "row_bytes",
+      "subject": {
+        "table": "banking_core_utility_account"
+      },
+      "sampled": false,
+      "sample_pct": null,
+      "sha256": "6b23ffb29f42ef0d54de35e90ad6604bb7471134ec84a05541fba22a10aa5818",
+      "status": "ok",
+      "values": {
+        "rows_seen": 6,
+        "avg_bytes": 17.1667,
+        "max_bytes": 19.0
+      }
+    },
+    {
+      "id": "value_domain:banking_core_account.status",
+      "query_id": "value_domain",
+      "subject": {
+        "table": "banking_core_account",
+        "column": "status"
+      },
+      "sampled": false,
+      "sample_pct": null,
+      "sha256": "e5ea0a5c2f7eb1595836876c220766fff7934cf7601f7307f066b0ff958e1e28",
+      "status": "ok",
+      "values": {
+        "values": [
+          [
+            "ACTIVE",
+            14
+          ]
+        ],
+        "null_count": 0
+      }
+    },
+    {
+      "id": "value_domain:banking_core_account.type",
+      "query_id": "value_domain",
+      "subject": {
+        "table": "banking_core_account",
+        "column": "type"
+      },
+      "sampled": false,
+      "sample_pct": null,
+      "sha256": "08c4691093f9c75dd73f5ac7eb6a498491bb93fa0f5b5a065ea620f09d3c68be",
+      "status": "ok",
+      "values": {
+        "values": [
+          [
+            "SAVINGS_ACCOUNT",
+            14
+          ]
+        ],
+        "null_count": 0
+      }
+    },
+    {
+      "id": "value_domain:banking_core_transaction.transaction_type",
+      "query_id": "value_domain",
+      "subject": {
+        "table": "banking_core_transaction",
+        "column": "transaction_type"
+      },
+      "sampled": false,
+      "sample_pct": null,
+      "sha256": "31186ccaca22baa622ced1e87540be81aba09eb5d17590bf650297719da17665",
+      "status": "ok",
+      "values": {
+        "values": [],
+        "null_count": 0
+      }
+    }
+  ],
+  "supplement_of": "data_profile.json",
+  "why": "data_profile.py emits row_bytes only for relationship tables and value_domain only for census trap columns; these stats were planned by hand from the same census and rendered with the same templates"
+}

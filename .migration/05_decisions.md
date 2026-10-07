@@ -515,3 +515,86 @@ what was done, evidence. Nothing here authorizes a write: write scope is `.migra
 - Did: nothing to correct. Entries (1)-(2) are the register the ticket asks for; the step's `discussion` text is the same register, posted on
   the ticket for the manager to carry into the plan.
 - Evidence: this session's command log; UNT5-8 ticket final message.
+
+## 2026-10-07 · s2.5-data-profile · (1) fan-out is measurable on this fixture; the ticket's "1 user / 1 account" premise is wrong, the "0 transactions" one holds
+
+- Tool said: `data_profile.py --census .migration/census.json --family mysql --source-dsn-secret MMP_RT_SRC_DSN` -> exit 0,
+  `stats=9 ok=9` (no `skipped`, no `failed`, no `missing`). `fanout:banking_core_account->banking_core_user(user_id)`:
+  parents 4, parents_zero 0, min 2, p50 3, p95 5, p99 5, max 5. `fk_integrity` user->account: child_rows 14, null_fk 0,
+  orphans 0. `fanout:banking_core_transaction->banking_core_account(account_id)`: parents 14, parents_zero 14, all
+  percentiles 0. `fk_integrity` account->transaction: child_rows 0 / 0 / 0. `row_bytes`: user 4 rows avg 36.0 max 39;
+  account 14 rows avg 52.71 max 54; transaction 0 rows, avg/max `null`. `embed_bytes` user->account p50 = p99 = max = 264;
+  account->transaction 0 / 0 / 0.
+- Observed: the ticket's blind-spot note assumes a seed of 1 user, 1 account, 0 transactions. The committed fixture
+  (`.migration/fixtures/w1-b01.json`, re-measured in this VM) has **4 users / 14 accounts / 6 utility accounts / 0
+  transactions**, so the user->account edge *is* measured (2..5 accounts per user, every user has at least 2, no orphans).
+  Only the account->transaction edge is degenerate: 14 parents, 0 children, which the fixture manifest already flags
+  must be read as *unmeasured*, not as 1:0. The `embed_bytes` p50 = p99 = max = 264 is **not** degeneracy: the template
+  buckets parents in 64 KB steps and `stat_values` caps every bucket at the observed max, so with all 4 parents in
+  bucket 0 the percentiles collapse to `max`. The real per-user sums (same `LENGTH()` expression, read-only check) are
+  106 / 155 / 264 / 213 bytes. Blind spot that stands: 4 users and 14 seed accounts say nothing about production
+  fan-out, and `model_proposal.py` will rate both children embeddable on size alone (264 B per user, 0 B per account).
+- Did: committed `.migration/data_profile.json` unedited. Did **not** seed rows (rule 1; the source is read-only). If
+  the manager wants an outlier parent or a transaction history to exercise the embed-size gate, that is a plan
+  decision (`d-profile-outlier`, proposed: a separate synthetic fixture variant `w1-b01x` with one user carrying
+  N accounts and M transactions per account, built from a second DDL dir, never written into this fixture) — not a
+  worker action.
+- Evidence: `.migration/data_profile.json` (`stats[*].values`, sha256 per rendered query); fixture re-measurement
+  `SELECT COUNT(*)` as `fixture_ro` = 4/14/6/0 (PR body); per-user sum transcript in the PR body.
+
+## 2026-10-07 · s2.5-data-profile · (2) `data_profile.py` is blind to the three code columns and to `banking_core_utility_account` (tool blind, supplement committed)
+
+- Tool said: `plan_stats()` emits `value_domain` only for columns the census lists under `traps` with kind
+  `yn_flag` / `int_flag` / `code_lookup`, and `row_bytes` only for tables that appear in a `relationships` entry. The
+  census `traps` list is empty: `ddl_census._traps` (shared with live mode) flags `code_lookup` only for `*_CD`
+  **numeric** columns, so `banking_core_account.status`, `banking_core_account.type` and
+  `banking_core_transaction.transaction_type` (VARCHAR, backed by Java enums `AccountStatus` / `AccountType` /
+  `TransactionType`) get no domain stat, and `banking_core_utility_account` (no FK, no parent) gets no `row_bytes`.
+  The ticket and gate `g-profile` require value domains for those columns and row bytes for all 4 tables.
+- Did: did not hand-edit the census (the bundle is sha256-pinned into the profile and "rerun, never edit" is the
+  rule). Wrote `.migration/data_profile_supplement.py`, which imports `data_profile.py`'s own helpers
+  (`_row_bytes_expr`, `_from_clause`, `_quote`, `run_live`, `build_profile`) and renders the **same** `mysql.md`
+  `profiling_queries` templates for the 4 missing stats, over one read-only connection, into
+  `.migration/data_profile.supplement.json` (same shape as `data_profile.json`, same `census_sha256`,
+  `supplement_of: data_profile.json`). Result `stats=4 ok=4`:
+  `row_bytes:banking_core_utility_account` rows 6, avg 17.17, max 19;
+  `value_domain:banking_core_account.status` = {ACTIVE: 14}, nulls 0 (app enum has 4 values: PENDING, ACTIVE,
+  DORMANT, BLOCKED -> 1 of 4 observed);
+  `value_domain:banking_core_account.type` = {SAVINGS_ACCOUNT: 14}, nulls 0 (enum: SAVINGS_ACCOUNT, FIXED_DEPOSIT,
+  LOAN_ACCOUNT -> 1 of 3 observed);
+  `value_domain:banking_core_transaction.transaction_type` = {} (0 rows; enum: FUND_TRANSFER, UTILITY_PAYMENT -> 0 of
+  2 observed). Domain coverage is therefore from the application enums, not from data: the mapping step must take
+  the full enum lists from `core-banking-service/src/main/java/com/javatodev/finance/model/*.java` as the domain
+  and treat the measured values as a subset. Worker judgment substituted for a human here: choosing a supplement
+  file over a census edit or a plugin patch.
+- Proposed for the manager (plugin finding, not fixed in this run): `data_profile.py` should emit `row_bytes` for
+  every census table and `value_domain` for short VARCHAR columns named `status` / `type` / `*_type` / `*_status`
+  (or the census should raise a `code_lookup` trap for them).
+- Evidence: `.migration/data_profile.supplement.json`; `.migration/data_profile_supplement.py`; `ddl_census.py`
+  line 1058-1060 (`*_CD` + `_NUMERIC_TYPES`); `data_profile.py` `plan_stats` lines 160-205 / 237-247.
+
+## 2026-10-07 · s2.5-data-profile · (3) `mmp_fixture_meta` not profiled (out of scope); `row_estimate` vs. measured rows
+
+- Tool said: the census carries the fixture scaffolding table `mmp_fixture_meta` (UNT5-6 entry 1). `data_profile.py`
+  emitted nothing for it (no relationship, no trap), and the supplement was not asked to measure it.
+- Did: left it unprofiled and marked **out of scope** — it does not exist on the customer source. Also confirmed the
+  UNT5-6 entry 2 point from the profile itself: `row_bytes:banking_core_user.rows_seen = 4` while the census
+  `row_estimate` says 2 (InnoDB `table_rows` guess); `rows_seen` / the fixture manifest are the row-count authority.
+  Sampling never engaged (`sampled: false` everywhere; every `row_estimate` is far below `--max-table-rows`).
+- Evidence: `.migration/data_profile.json` (`stats` has no `mmp_fixture_meta` subject); `.migration/census.json`
+  `tables.banking_core_user.row_estimate`.
+
+## 2026-10-07 · s2.5-data-profile · (4) worker-VM friction, same as s1.4 / s1.2 / s2.1: harness unbound, no `mysql` client, guard recipe held
+
+- Observed: fresh worker VM again had no `recon` entry point and no `pymysql` in the system `python3`; bound the
+  harness with `/home/ubuntu/.venvs/recon/bin/pip install -e "<plugin>/skills/mongo-recon-harness/harness[mongo,mysql]"`
+  from the plugin clone at `caeb34dc` (PyMySQL 2.2.8 in the venv). `data_profile.py` imports
+  `catalog_census._connect`, so it must run under that venv's Python, not the system `python3` (same as the census).
+  No `mysql` client on the host: the manifest's root-side rebuild steps ran through
+  `docker exec schema-modeling-mysql-1 mysql ...` (same statements, same `MYSQL_PWD` env). Fixture rebuilt:
+  `mmp_fixture_meta.scripts_failed = 0`, MySQL 8.4.11, `@@global.time_zone = +00:00`, `fixture_ro` grants `USAGE` +
+  `SELECT, SHOW VIEW ON banking_core_service.*`, rows 4/14/6/0.
+- Did: every command ran from `$HOME` with absolute paths / `git -C`; `--out` absolute (`$HOME/mmp-profile/`), files
+  copied into `.migration/`. No shell was blocked by the dbx-migration-factory guard. No target access was used; Atlas
+  untouched.
+- Evidence: this session's command log; UNT5-6 entry (4).
