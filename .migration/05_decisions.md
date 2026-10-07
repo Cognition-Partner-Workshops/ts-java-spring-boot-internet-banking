@@ -826,3 +826,96 @@ what was done, evidence. Nothing here authorizes a write: write scope is `.migra
   No source connection, no fixture, no Atlas; census / profile / supplement / access files untouched. Branch rebased onto
   `origin/mmp-rt/b1-mysql` (`6ffa861`) before the PR.
 - Evidence: this session's command log; PR body.
+
+## 2026-10-07 · s3.3-unit-derivation · (1) `g-model-accepted`: the human tick in the Plan view is substituted by the manager's unattended acceptance
+
+- Tool said: `skills/migration-planning/SKILL.md` ("Gate: `g-model-accepted` — the human ticks it in the Plan view") and the plan
+  gate text ("Mapping spec map-draft-N accepted for the unattended run: model_patch --check exit 0, every embed/reference choice
+  cited in design_decisions.json, assumed cardinalities listed plainly"). No tool produces this gate; nothing in the plugin
+  records an acceptance.
+- Did: per the intake, the acceptance is the **manager's**, taken unattended from the three evidence items below; no human
+  reviewed map-draft-3. Recorded here so the gate is not read as a human sign-off. Evidence the manager accepts on:
+  (a) `model_patch.py --spec <repo>/.migration/mapping_spec.json --check --census --data-profile --access-patterns --workspace
+  <abs repo>` re-run in this session on the committed bytes (`mapping_spec.json` sha256 `669b4e98…a0c38`, `design_decisions.json`
+  sha256 `ffa07935…b2f2`) -> exit 0, no stdout (no `g-model-evidence:` finding).
+  (b) every embed/reference choice is a cited decision: `design_decisions.json` holds 15 entries — 4 `reference` (d-embed-accounts
+  ×2, d-embed-transactions ×2, each with an `access_pattern` ref or a file:line quote), 9 `index` (entries 5-8, 11-15), 1 `pattern`
+  (entry 9), 1 `resolve` (entry 10, `mmp_fixture_meta` excluded); `modeling.decisions` in the spec lists the same 15; 0 embeds,
+  0 `unresolved`.
+  (c) assumed cardinalities, stated plainly: `banking_core_user -> banking_core_account` is **assumed** 1:N
+  (`modeling.rationale[0].basis = "assumed"`, s3.1 entry 1 explains the `shared_child` short-circuit); the fixture measures fan-out
+  min 2 / p50 3 / max 5 over 4 parents, 0 orphans — production fan-out is unmeasured and the reference decision does not depend on
+  it. `banking_core_account -> banking_core_transaction` is `derived` from access patterns (`child_written_alone`) but its fan-out
+  is **unmeasured** (`parents_zero: 14`, 0 transaction rows; `fixtures/w1-b01.json` `known_limits[0]`): treated as unbounded 1:N
+  (append-only, 2 rows per transfer, 1 per utility payment). `banking_core_utility_account` has no relationship in either
+  direction (3 columns, no FK; s3.1 entry 4). Nothing else is assumed.
+- Human review substituted (unattended): the manager, not a human, accepts map-draft-3 on (a)-(c). A human may still re-open
+  `d-embed-accounts` / `d-embed-transactions` before wave 1 is dispatched; after `s4.1.0-preflight` pins `mapping_sha256`, a change
+  means a new map-draft-N and a new wave spec.
+- Evidence: this session's `--check` run (exit 0); `.migration/design_decisions.json`; `.migration/mapping_spec.json`
+  `modeling.rationale`, `modeling.decisions`, `modeling.unresolved`, `modeling.resolved`.
+
+## 2026-10-07 · s3.3-unit-derivation · (2) no plugin artefact for the unit list; the wave proposal is a scratch spec kept out of `.migration/`, validated with `preflight.py`
+
+- Tool said: `skills/wave-planning/SKILL.md` takes "the accepted unit list" as a ticket **input** and writes the wave spec as "a
+  scratch file / ticket attachment, kept OUT of `.migration/`"; `preflight.py` `MIGRATION_LAYOUT` names no `units.json` and warns
+  on any other file under `.migration/`. No skill or script defines a unit-list file or shape beyond `skills/unit-migration/SKILL.md`
+  "unit list with code locations".
+- Did: no `.migration/units.json`. The unit list (one unit, `core-banking`: 4 collections + the whole `core-banking-service`
+  persistence slice, code locations file by file) and the one-wave proposal are returned as text on the ticket / PR body, and the
+  proposed wave-1 spec is attached to the ticket as `wave-1.proposal.json` (scratch, not committed). Validated here exactly as
+  `s4.1.0-preflight` will: `python3 <plugin>/skills/wave-preflight/preflight.py --wave $HOME/mmp-s33/wave-1.proposal.json --root
+  <abs repo> --emit-tickets` -> exit 0, `wave 1 OK: 1 batches, manifest_sha f672bf2f9220`, two ticket blocks emitted (batch
+  `w1-b01`, verifier `wave-1-verify`), `auto_merge eligible: False`. Spec: `wave 1`, `live` × `migration_cluster` (copied from
+  `.migration/connectivity.json`), `auto_merge false`, one batch `w1-b01`, `units ["core-banking"]`, write targets
+  `mmp_rt_b1_mysql.{bankingCoreUser,bankingCoreAccount,bankingCoreUtilityAccount,bankingCoreTransaction}`, fixture manifest
+  `.migration/fixtures/w1-b01.json`, `tol-1` / `map-draft-3`, `mapping_sha256 669b4e98932d00d893b249ba66fa88c9c44e89831b50d7370d85ff681a2a0c38`,
+  `tolerance_sha256 8ea506ef76b192076c5f023d25fe3591f384a40d3e044e7743679ba5d11e690d` (both from `git show origin/mmp-rt/b1-mysql:
+  .migration/<file> | sha256sum`, committed bytes). `manifest_sha` is the sha256 of the spec's canonical JSON (key order
+  independent), so `s4.1.0-preflight` reproduces `f672bf2f9220` only from an identical spec; any field change gives a new sha and
+  that ticket's value is the one the batch and verifier tickets carry.
+- Observed: `preflight.py` prints `warning: 05_decisions.md, data_profile.supplement.json, data_profile_supplement.py are not read by
+  any tool` — the known layout warning (s1.3 entry 3); non-fatal, nothing renamed. It did **not** look for
+  `allowed_targets.json` on `origin/main` (the UNT5-13 ticket's suspected gap): the preflight's four checks read only the spec and
+  the fixture manifest under `--root`; `origin/main` is consulted only by `mongo_guard` (s1.3 entry 1, `MONGO_GUARD_BASE_REF`).
+- Write-target naming: the UNT5-13 ticket text spells the targets as `mmp_rt_b1_mysql.banking_core_user` etc. and then says "use
+  the collection names the mapping spec actually emits" — the spec emits camelCase `bankingCoreUser`, `bankingCoreAccount`,
+  `bankingCoreUtilityAccount`, `bankingCoreTransaction` (`mapping_spec.json` `collections[*].collection`), so those are the unit's
+  write targets. **`mmpFixtureMeta` is not a write target and not in the unit's collection list**: it is the spec's fifth entry only
+  because `model_patch.py` has no exclude op (s3.1 entry 2), resolved `excluded` by decision 10 (`modeling.resolved[0]`); the
+  recon harness grades `write_targets` against the `collections` each `result.json` records, so leaving it out of the targets
+  also keeps it out of the parity run. `_connectivity_probe` (empty, left by the s1.2 probe) is likewise not a target.
+- Evidence: preflight transcript in the PR body; `wave-1.proposal.json` attached to ticket UNT5-12; `preflight.py`
+  `layout_warnings`, `validate_manifest`, `manifest_sha`.
+
+## 2026-10-07 · s3.3-unit-derivation · (3) ticket text vs. the module: Gradle, not Maven; the datasource is not in `application.yml`
+
+- Ticket said: the unit owns "`application.yml` datasource, Flyway config, `pom.xml` dependencies".
+- Observed: `core-banking-service` is a **Gradle** module (`build.gradle`, `settings.gradle`, own wrapper 8.6; no `pom.xml` anywhere
+  in the repo). The persistence dependencies are `build.gradle:30` `spring-boot-starter-data-jpa`, `:50-51` `flyway-core` /
+  `flyway-mysql` 10.12.0, `:52` `mysql-connector-j 8.4.0`. `src/main/resources/application.yml` holds only
+  `spring.application.name`; the MySQL datasource / JPA / Flyway properties are served at runtime by the config server
+  (`bootstrap*.yml` -> `internet-banking-config-server`, which reads the **external** repo
+  `https://github.com/JavatoDev-com/internet-banking-microservices-configurations.git`, search path `configuration`,
+  `internet-banking-config-server/src/main/resources/application.yml:7-9`). Only the test profile has a local datasource:
+  `src/test/resources/application.yml` (H2 `jdbc:h2:mem:banking_core_service`, `flyway.enabled: false`).
+- Did: the unit description names the real files (`build.gradle` lines above, `application.yml` + the external configuration repo,
+  the test `application.yml`, the Flyway files as source-DDL reference only). Dependency crossing for s4.1.b01, not resolvable
+  here: the Mongo connection properties for `core-banking-service` must land either in that external configuration repo (outside
+  this run's write scope and this repository — a change there is a customer-side change) or as a module-local profile /
+  `application.yml` override that the worker adds inside `core-banking-service`; the recommended default is the module-local
+  override (keeps the run inside the allowlisted repo and the `MONGODB_ATLAS_URI`-by-name rule), with the external repo change
+  listed as a cutover prerequisite (p6). Also for s4.1.b01: the unit tests wire H2 through JPA, so test persistence needs a Mongo
+  substitute (embedded/Testcontainers) — the worker's choice, recorded in its PR.
+- Evidence: `core-banking-service/build.gradle:28-52`; `core-banking-service/src/main/resources/{application,bootstrap,bootstrap-docker}.yml`;
+  `core-banking-service/src/test/resources/application.yml`; `internet-banking-config-server/src/main/resources/application.yml:7-9`;
+  `git -C <repo> ls-files '*pom.xml'` = 0.
+
+## 2026-10-07 · s3.3-unit-derivation · (4) run mechanics: files only, nothing else to correct
+
+- Did: no fixture rebuilt, no source connection, no Atlas connection, no harness run; `recon` not needed for this step. Every
+  command ran from `$HOME` with absolute paths / `git -C <repo>` (dbx-migration-factory guard recipe, s1.3 entry 5); no shell was
+  blocked. Inputs read as committed on `origin/mmp-rt/b1-mysql` at `0591238` (merge of PR #36); the hashes above are of those bytes,
+  not of a working copy. Spec, decisions, census, profile, access and fixture files untouched; this step adds only these four
+  ledger entries. Branch rebased onto `origin/mmp-rt/b1-mysql` immediately before the PR (ledger append-only, no parallel writer).
+- Evidence: this session's command log; PR body.
