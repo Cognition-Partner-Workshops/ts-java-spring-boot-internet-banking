@@ -224,8 +224,6 @@ what was done, evidence. Nothing here authorizes a write: write scope is `.migra
 - Did: every command in this session ran from `$HOME` with absolute paths and `git -C <repo>`; no shell
   was blocked. The allowlist file stays as specified (`databases`, no `catalogs` key), per `d-dbx-guard`.
 - Evidence: this session's command log; UNT5-2 entry (5).
-||||||| parent of 5863e89 (mongo-migration: connectivity probe exit 0 with scoped target principal (UNT5-4, s1.2-connectivity))
-
 
 ## 2026-10-07 · s1.2-connectivity · (1) target principal: probe hard-blocks the intake-given `MONGODB_ATLAS_URI` (tool right, intake wrong)
 
