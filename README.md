@@ -35,7 +35,7 @@ Container | IP | Port Mapping |
 openzipkin_server | 172.25.0.12 | 9411
 keycloak_web | 172.25.0.11 | 8080
 keycloak_postgre_db | 172.25.0.10 | 5432(Closed Port)
-mysql_javatodev_app | 172.25.0.9 | 3306
+postgres_javatodev_app | 172.25.0.9 | 5432
 internet-banking-config-server | 172.25.0.8 | 8090
 internet-banking-service-registry | 172.25.0.7 | 8081
 internet-banking-api-gateway | 172.25.0.6 | 8082
@@ -94,7 +94,7 @@ alt="Spring Boot Microservices Project Architecture By Javatodev.com"/></a>
 10. Open Feign
 11. RabbitMQ
 12. Prometheus 
-13. MySQL 
+13. PostgreSQL 
 14. Keycloak 
 15. Docker / Docker Compose 
 16. Kubernetes 

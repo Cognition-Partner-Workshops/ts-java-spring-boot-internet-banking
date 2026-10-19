@@ -45,15 +45,16 @@ services:
       javatodev_ib_network:
         ipv4_address: 172.25.0.10
 
-  mysql_core_db:
-    build: mysql
-    container_name: mysql_javatodev_app
+  postgres_core_db:
+    build: postgres
+    container_name: postgres_javatodev_app
     environment:
-      MYSQL_ROOT_PASSWORD: woVERANKliGharym
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: woVERANKliGharym
     ports:
-      - 3306:3306
+      - 5432:5432
     volumes:
-      - mysqldata:/var/lib/mysql
+      - pgdata:/var/lib/postgresql/data
     networks:
       javatodev_ib_network:
         ipv4_address: 172.25.0.9
@@ -91,7 +92,7 @@ services:
     container_name: internet-banking-user-service
     ports:
       - 8083:8083
-    entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "mysql_core_db:3306", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
+    entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "postgres_core_db:5432", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
     networks:
       javatodev_ib_network:
         ipv4_address: 172.25.0.5
@@ -101,7 +102,7 @@ services:
     container_name: internet-banking-fund-transfer-service
     ports:
       - 8084:8084
-    entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "mysql_core_db:3306", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
+    entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "postgres_core_db:5432", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
     networks:
       javatodev_ib_network:
         ipv4_address: 172.25.0.4
@@ -111,7 +112,7 @@ services:
     image: javatodev/internet-banking-utility-payment-service
     ports:
       - 8085:8085
-    entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "mysql_core_db:3306", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
+    entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "postgres_core_db:5432", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
     networks:
       javatodev_ib_network:
         ipv4_address: 172.25.0.3
@@ -121,14 +122,14 @@ services:
     container_name: core-banking-service
     ports:
       - 8092:8092
-    entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "mysql_core_db:3306", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
+    entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "postgres_core_db:5432", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
     networks:
       javatodev_ib_network:
         ipv4_address: 172.25.0.2
 
 volumes:
   postgres_data:
-  mysqldata:
+  pgdata:
 
 networks:
   javatodev_ib_network:
