@@ -3,12 +3,15 @@ package com.javatodev.finance.service;
 import com.javatodev.finance.exception.EntityNotFoundException;
 import com.javatodev.finance.exception.GlobalErrorCode;
 import com.javatodev.finance.exception.InsufficientFundsException;
+import com.javatodev.finance.exception.SimpleBankingGlobalException;
 import com.javatodev.finance.model.TransactionType;
 import com.javatodev.finance.model.dto.BankAccount;
 import com.javatodev.finance.model.dto.UtilityAccount;
 import com.javatodev.finance.model.dto.request.FundTransferRequest;
 import com.javatodev.finance.model.dto.request.UtilityPaymentRequest;
 import com.javatodev.finance.model.dto.response.FundTransferResponse;
+import com.javatodev.finance.model.dto.response.StatementSummaryResponse;
+import com.javatodev.finance.model.dto.response.TransactionTypeTotal;
 import com.javatodev.finance.model.dto.response.UtilityPaymentResponse;
 import com.javatodev.finance.model.entity.BankAccountEntity;
 import com.javatodev.finance.model.entity.TransactionEntity;
@@ -18,6 +21,13 @@ import com.javatodev.finance.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import jakarta.transaction.Transactional;
@@ -67,6 +77,7 @@ public class TransactionService {
             .account(fromAccount)
             .transactionId(transactionId)
             .referenceNumber(utilityPaymentRequest.getReferenceNumber())
+            .timestamp(LocalDateTime.now())
             .amount(utilityPaymentRequest.getAmount().negate()).build());
 
         return UtilityPaymentResponse.builder().message("Utility payment successfully completed")
@@ -94,6 +105,7 @@ public class TransactionService {
         transactionRepository.save(TransactionEntity.builder().transactionType(TransactionType.FUND_TRANSFER)
             .referenceNumber(toBankAccountEntity.getNumber())
             .transactionId(transactionId)
+            .timestamp(LocalDateTime.now())
             .account(fromBankAccountEntity).amount(amount.negate()).build());
 
         toBankAccountEntity.setActualBalance(toBankAccountEntity.getActualBalance().add(amount));
@@ -103,9 +115,59 @@ public class TransactionService {
         transactionRepository.save(TransactionEntity.builder().transactionType(TransactionType.FUND_TRANSFER)
             .referenceNumber(toBankAccountEntity.getNumber())
             .transactionId(transactionId)
+            .timestamp(LocalDateTime.now())
             .account(toBankAccountEntity).amount(amount).build());
 
         return transactionId;
+
+    }
+
+    public StatementSummaryResponse getStatementSummary(String accountNumber, LocalDate from, LocalDate to) {
+
+        //ensures the account exists (throws EntityNotFoundException otherwise), consistent with other account reads
+        accountService.readBankAccount(accountNumber);
+
+        if (from == null || to == null || from.isAfter(to)) {
+            throw new SimpleBankingGlobalException(GlobalErrorCode.INVALID_DATE_RANGE,
+                "Invalid statement period: 'from' must not be after 'to'.");
+        }
+
+        LocalDateTime start = from.atStartOfDay();
+        LocalDateTime end = to.atTime(LocalTime.MAX);
+
+        List<TransactionEntity> transactions = transactionRepository.findForStatement(accountNumber, start, end);
+
+        //keyed by transaction type name for deterministic (alphabetical) ordering
+        Map<String, TransactionType> types = new TreeMap<>();
+        Map<String, BigDecimal> amountByType = new TreeMap<>();
+        Map<String, Long> countByType = new TreeMap<>();
+
+        for (TransactionEntity transaction : transactions) {
+            String key = transaction.getTransactionType().name();
+            types.put(key, transaction.getTransactionType());
+            amountByType.merge(key, transaction.getAmount(), BigDecimal::add);
+            countByType.merge(key, 1L, Long::sum);
+        }
+
+        List<TransactionTypeTotal> totals = new ArrayList<>();
+        BigDecimal netTotal = BigDecimal.ZERO;
+        for (Map.Entry<String, TransactionType> entry : types.entrySet()) {
+            BigDecimal typeTotal = amountByType.get(entry.getKey());
+            totals.add(TransactionTypeTotal.builder()
+                .transactionType(entry.getValue())
+                .totalAmount(typeTotal)
+                .transactionCount(countByType.get(entry.getKey()))
+                .build());
+            netTotal = netTotal.add(typeTotal);
+        }
+
+        return StatementSummaryResponse.builder()
+            .accountNumber(accountNumber)
+            .from(from)
+            .to(to)
+            .netTotal(netTotal)
+            .totals(totals)
+            .build();
 
     }
 
