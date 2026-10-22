@@ -3,21 +3,28 @@ package com.javatodev.finance.service;
 import com.javatodev.finance.exception.EntityNotFoundException;
 import com.javatodev.finance.exception.GlobalErrorCode;
 import com.javatodev.finance.exception.InsufficientFundsException;
+import com.javatodev.finance.exception.ValidationException;
 import com.javatodev.finance.model.TransactionType;
 import com.javatodev.finance.model.dto.BankAccount;
 import com.javatodev.finance.model.dto.UtilityAccount;
 import com.javatodev.finance.model.dto.request.FundTransferRequest;
 import com.javatodev.finance.model.dto.request.UtilityPaymentRequest;
 import com.javatodev.finance.model.dto.response.FundTransferResponse;
+import com.javatodev.finance.model.dto.response.TransactionResponse;
 import com.javatodev.finance.model.dto.response.UtilityPaymentResponse;
 import com.javatodev.finance.model.entity.BankAccountEntity;
 import com.javatodev.finance.model.entity.TransactionEntity;
+import com.javatodev.finance.model.mapper.TransactionMapper;
 import com.javatodev.finance.repository.BankAccountRepository;
 import com.javatodev.finance.repository.TransactionRepository;
 
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.transaction.Transactional;
@@ -28,9 +35,34 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TransactionService {
 
+    private final TransactionMapper transactionMapper = new TransactionMapper();
+
     private final AccountService accountService;
     private final BankAccountRepository bankAccountRepository;
     private final TransactionRepository transactionRepository;
+
+    public List<TransactionResponse> getAccountTransactions(String accountNumber, LocalDate fromDate, LocalDate toDate) {
+
+        //validate the account exists so callers can distinguish an unknown account from an empty history
+        accountService.readBankAccount(accountNumber);
+
+        boolean hasFrom = fromDate != null;
+        boolean hasTo = toDate != null;
+        if (hasFrom ^ hasTo) {
+            throw new ValidationException("Both fromDate and toDate are required for range filtering");
+        }
+
+        List<TransactionEntity> transactions;
+        if (hasFrom) {
+            LocalDateTime start = fromDate.atStartOfDay();
+            LocalDateTime end = toDate.atTime(LocalTime.MAX);
+            transactions = transactionRepository.findByAccount_NumberAndCreatedAtBetweenOrderByCreatedAtDesc(accountNumber, start, end);
+        } else {
+            transactions = transactionRepository.findByAccount_NumberOrderByCreatedAtDesc(accountNumber);
+        }
+
+        return transactionMapper.convertToDtoList(transactions);
+    }
 
     public FundTransferResponse fundTransfer(FundTransferRequest fundTransferRequest) {
 

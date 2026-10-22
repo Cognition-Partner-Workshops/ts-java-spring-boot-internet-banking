@@ -3,15 +3,20 @@ package com.javatodev.finance.model.entity;
 import com.javatodev.finance.model.TransactionType;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Builder
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "banking_core_transaction")
 public class TransactionEntity {
@@ -29,8 +34,18 @@ public class TransactionEntity {
 
     private String transactionId;
 
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "account_id", referencedColumnName = "id")
     private BankAccountEntity account;
+
+    @PrePersist
+    void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
 
 }
