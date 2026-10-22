@@ -1,0 +1,178 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# One in-flight run per branch/PR; superseded runs are cancelled (never cancel main).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  JAVA_VERSION: '21'
+  JAVA_DISTRIBUTION: temurin
+
+jobs:
+  # Decides which service modules this run has to build.
+  # PRs: only modules whose files changed (plus everything when a shared/CI file changed).
+  # Pushes to the default branch: always the full estate.
+  changes:
+    name: Detect changed services
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.detect.outputs.services }}
+      any: ${{ steps.detect.outputs.any }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          ALL=(core-banking-service \
+               internet-banking-api-gateway \
+               internet-banking-config-server \
+               internet-banking-fund-transfer-service \
+               internet-banking-service-registry \
+               internet-banking-user-service \
+               internet-banking-utility-payment-service)
+          ALL_JSON="$(printf '%s\n' "${ALL[@]}" | jq -cRn '[inputs | select(length > 0)]')"
+
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "Default-branch push: building every service."
+            SERVICES="$ALL_JSON"
+          else
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+            CHANGED="$(git diff --name-only "$BASE" "$HEAD")"
+            echo "Changed files:"; echo "$CHANGED"
+
+            # Changes outside the service modules (workflows, compose, docs tooling)
+            # can affect every module, so fall back to a full build.
+            if grep -qE '^(\.github/|docker-compose/)' <<< "$CHANGED"; then
+              echo "Shared path touched: building every service."
+              SERVICES="$ALL_JSON"
+            else
+              SERVICES="$(
+                for svc in "${ALL[@]}"; do
+                  if grep -q "^${svc}/" <<< "$CHANGED"; then echo "$svc"; fi
+                done | jq -cRn '[inputs | select(length > 0)]'
+              )"
+            fi
+          fi
+
+          echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
+          if [ "$SERVICES" = "[]" ]; then echo "any=false" >> "$GITHUB_OUTPUT"; else echo "any=true" >> "$GITHUB_OUTPUT"; fi
+
+  # Repo-wide static validation: Gradle wrapper integrity + compile of the affected
+  # modules. This repo has no Checkstyle/Spotless/PMD configuration today, so the
+  # format gate below is a no-op placeholder that activates automatically once a
+  # `check`-wired quality plugin is added to the module build files.
+  validate:
+    name: Validate (wrapper + compile)
+    needs: changes
+    if: needs.changes.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate Gradle wrapper checksums
+        uses: gradle/actions/wrapper-validation@0bdd871935719febd78681f197cd39af5b6e16a6 # v4.2.2
+
+      - uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: gradle
+
+      - name: Compile changed services
+        shell: bash
+        run: |
+          set -euo pipefail
+          for svc in $(jq -r '.[]' <<< '${{ needs.changes.outputs.services }}'); do
+            echo "::group::compile $svc"
+            (cd "$svc" && ./gradlew --no-daemon classes testClasses)
+            echo "::endgroup::"
+          done
+
+      - name: Static analysis (Checkstyle / Spotless) if configured
+        shell: bash
+        run: |
+          set -euo pipefail
+          for svc in $(jq -r '.[]' <<< '${{ needs.changes.outputs.services }}'); do
+            if grep -qE "checkstyle|spotless|pmd" "$svc/build.gradle"; then
+              echo "::group::static analysis $svc"
+              (cd "$svc" && ./gradlew --no-daemon check -x test)
+              echo "::endgroup::"
+            else
+              echo "No quality plugin configured for $svc - skipping."
+            fi
+          done
+
+  build-test:
+    name: Build & test ${{ matrix.service }}
+    needs: changes
+    if: needs.changes.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-java@3a4f6e1af504cf6a31855fa899c6aa5355ba6c12 # v4.7.0
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: gradle
+
+      - name: Build and test
+        working-directory: ${{ matrix.service }}
+        run: ./gradlew --no-daemon build
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: test-reports-${{ matrix.service }}
+          path: |
+            ${{ matrix.service }}/build/reports/tests/test/**
+            ${{ matrix.service }}/build/test-results/test/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload boot jar
+        if: success()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: jar-${{ matrix.service }}
+          path: ${{ matrix.service }}/build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 7
+
+  # Single required status check: stays green when nothing had to be rebuilt.
+  ci:
+    name: CI status
+    if: always()
+    needs: [changes, validate, build-test]
+    runs-on: ubuntu-latest
+    steps:
+      - shell: bash
+        run: |
+          echo "changes=${{ needs.changes.result }} validate=${{ needs.validate.result }} build-test=${{ needs.build-test.result }}"
+          for r in "${{ needs.changes.result }}" "${{ needs.validate.result }}" "${{ needs.build-test.result }}"; do
+            case "$r" in
+              success|skipped) ;;
+              *) echo "A required job did not succeed."; exit 1 ;;
+            esac
+          done
