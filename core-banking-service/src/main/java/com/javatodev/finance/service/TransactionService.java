@@ -9,15 +9,21 @@ import com.javatodev.finance.model.dto.UtilityAccount;
 import com.javatodev.finance.model.dto.request.FundTransferRequest;
 import com.javatodev.finance.model.dto.request.UtilityPaymentRequest;
 import com.javatodev.finance.model.dto.response.FundTransferResponse;
+import com.javatodev.finance.model.dto.response.TransactionResponse;
 import com.javatodev.finance.model.dto.response.UtilityPaymentResponse;
 import com.javatodev.finance.model.entity.BankAccountEntity;
 import com.javatodev.finance.model.entity.TransactionEntity;
+import com.javatodev.finance.model.mapper.TransactionMapper;
 import com.javatodev.finance.repository.BankAccountRepository;
 import com.javatodev.finance.repository.TransactionRepository;
 
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.transaction.Transactional;
@@ -28,9 +34,36 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TransactionService {
 
+    private final TransactionMapper transactionMapper = new TransactionMapper();
+
     private final AccountService accountService;
     private final BankAccountRepository bankAccountRepository;
     private final TransactionRepository transactionRepository;
+
+    public List<TransactionResponse> getTransactionHistory(String accountNumber, LocalDate from, LocalDate to) {
+
+        //validates the account exists, reusing the existing lookup that throws EntityNotFoundException
+        accountService.readBankAccount(accountNumber);
+
+        LocalDateTime fromTimestamp = from != null ? from.atStartOfDay() : null;
+        LocalDateTime toTimestamp = to != null ? to.atTime(LocalTime.MAX) : null;
+
+        List<TransactionEntity> transactions;
+        if (fromTimestamp != null && toTimestamp != null) {
+            transactions = transactionRepository
+                .findByAccount_NumberAndTimestampBetweenOrderByTimestampDescIdDesc(accountNumber, fromTimestamp, toTimestamp);
+        } else if (fromTimestamp != null) {
+            transactions = transactionRepository
+                .findByAccount_NumberAndTimestampGreaterThanEqualOrderByTimestampDescIdDesc(accountNumber, fromTimestamp);
+        } else if (toTimestamp != null) {
+            transactions = transactionRepository
+                .findByAccount_NumberAndTimestampLessThanEqualOrderByTimestampDescIdDesc(accountNumber, toTimestamp);
+        } else {
+            transactions = transactionRepository.findByAccount_NumberOrderByTimestampDescIdDesc(accountNumber);
+        }
+
+        return transactionMapper.convertToDtoList(transactions);
+    }
 
     public FundTransferResponse fundTransfer(FundTransferRequest fundTransferRequest) {
 
@@ -67,6 +100,7 @@ public class TransactionService {
             .account(fromAccount)
             .transactionId(transactionId)
             .referenceNumber(utilityPaymentRequest.getReferenceNumber())
+            .timestamp(LocalDateTime.now())
             .amount(utilityPaymentRequest.getAmount().negate()).build());
 
         return UtilityPaymentResponse.builder().message("Utility payment successfully completed")
@@ -94,6 +128,7 @@ public class TransactionService {
         transactionRepository.save(TransactionEntity.builder().transactionType(TransactionType.FUND_TRANSFER)
             .referenceNumber(toBankAccountEntity.getNumber())
             .transactionId(transactionId)
+            .timestamp(LocalDateTime.now())
             .account(fromBankAccountEntity).amount(amount.negate()).build());
 
         toBankAccountEntity.setActualBalance(toBankAccountEntity.getActualBalance().add(amount));
@@ -103,6 +138,7 @@ public class TransactionService {
         transactionRepository.save(TransactionEntity.builder().transactionType(TransactionType.FUND_TRANSFER)
             .referenceNumber(toBankAccountEntity.getNumber())
             .transactionId(transactionId)
+            .timestamp(LocalDateTime.now())
             .account(toBankAccountEntity).amount(amount).build());
 
         return transactionId;
