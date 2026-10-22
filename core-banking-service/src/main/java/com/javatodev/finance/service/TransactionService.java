@@ -3,11 +3,13 @@ package com.javatodev.finance.service;
 import com.javatodev.finance.exception.EntityNotFoundException;
 import com.javatodev.finance.exception.GlobalErrorCode;
 import com.javatodev.finance.exception.InsufficientFundsException;
+import com.javatodev.finance.exception.InvalidRequestException;
 import com.javatodev.finance.model.TransactionType;
 import com.javatodev.finance.model.dto.BankAccount;
 import com.javatodev.finance.model.dto.UtilityAccount;
 import com.javatodev.finance.model.dto.request.FundTransferRequest;
 import com.javatodev.finance.model.dto.request.UtilityPaymentRequest;
+import com.javatodev.finance.model.dto.response.AccountBalanceResponse;
 import com.javatodev.finance.model.dto.response.FundTransferResponse;
 import com.javatodev.finance.model.dto.response.UtilityPaymentResponse;
 import com.javatodev.finance.model.entity.BankAccountEntity;
@@ -18,6 +20,7 @@ import com.javatodev.finance.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import jakarta.transaction.Transactional;
@@ -67,6 +70,7 @@ public class TransactionService {
             .account(fromAccount)
             .transactionId(transactionId)
             .referenceNumber(utilityPaymentRequest.getReferenceNumber())
+            .timestamp(LocalDateTime.now())
             .amount(utilityPaymentRequest.getAmount().negate()).build());
 
         return UtilityPaymentResponse.builder().message("Utility payment successfully completed")
@@ -94,6 +98,7 @@ public class TransactionService {
         transactionRepository.save(TransactionEntity.builder().transactionType(TransactionType.FUND_TRANSFER)
             .referenceNumber(toBankAccountEntity.getNumber())
             .transactionId(transactionId)
+            .timestamp(LocalDateTime.now())
             .account(fromBankAccountEntity).amount(amount.negate()).build());
 
         toBankAccountEntity.setActualBalance(toBankAccountEntity.getActualBalance().add(amount));
@@ -103,9 +108,36 @@ public class TransactionService {
         transactionRepository.save(TransactionEntity.builder().transactionType(TransactionType.FUND_TRANSFER)
             .referenceNumber(toBankAccountEntity.getNumber())
             .transactionId(transactionId)
+            .timestamp(LocalDateTime.now())
             .account(toBankAccountEntity).amount(amount).build());
 
         return transactionId;
+
+    }
+
+    public AccountBalanceResponse getBalanceAsOf(String accountNumber, LocalDateTime asOf) {
+
+        if (asOf == null) {
+            throw new InvalidRequestException("As-of date/time is required");
+        }
+
+        BankAccountEntity account = bankAccountRepository.findByNumber(accountNumber)
+            .orElseThrow(EntityNotFoundException::new);
+
+        BigDecimal balance = account.getActualBalance();
+
+        for (TransactionEntity transaction : transactionRepository.findByAccountNumber(accountNumber)) {
+            LocalDateTime timestamp = transaction.getTimestamp();
+            if (timestamp != null && timestamp.isAfter(asOf)) {
+                balance = balance.subtract(transaction.getAmount());
+            }
+        }
+
+        return AccountBalanceResponse.builder()
+            .accountNumber(accountNumber)
+            .asOf(asOf)
+            .balance(balance)
+            .build();
 
     }
 
