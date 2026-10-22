@@ -1,0 +1,63 @@
+# Rendered per service by .github/deploy/deploy.sh (sed substitution).
+# Demo manifest: single replica, no ingress, no persistence.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${SERVICE}
+  namespace: ${K8S_NAMESPACE}
+  labels:
+    app.kubernetes.io/name: ${SERVICE}
+    app.kubernetes.io/part-of: internet-banking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${SERVICE}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${SERVICE}
+        app.kubernetes.io/part-of: internet-banking
+    spec:
+      containers:
+        - name: ${SERVICE}
+          image: ${ECR_REGISTRY}/${SERVICE}:${IMAGE_TAG}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: ${SERVICE_PORT}
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: '1'
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${SERVICE}
+  namespace: ${K8S_NAMESPACE}
+spec:
+  selector:
+    app.kubernetes.io/name: ${SERVICE}
+  ports:
+    - name: http
+      port: ${SERVICE_PORT}
+      targetPort: http
