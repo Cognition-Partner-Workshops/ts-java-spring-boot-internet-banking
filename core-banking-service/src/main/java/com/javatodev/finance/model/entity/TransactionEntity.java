@@ -2,7 +2,10 @@ package com.javatodev.finance.model.entity;
 
 import com.javatodev.finance.model.TransactionType;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
 import lombok.Builder;
@@ -32,5 +35,9 @@ public class TransactionEntity {
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "account_id", referencedColumnName = "id")
     private BankAccountEntity account;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
 }
