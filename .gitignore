@@ -1,1 +1,4 @@
 .idea
+
+# local secrets for docker-compose (copy from docker-compose/.env.example)
+docker-compose/.env

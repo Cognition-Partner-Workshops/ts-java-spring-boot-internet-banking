@@ -3,8 +3,8 @@ spring:
     name: internet-banking-utility-payment-service
   datasource:
     url: jdbc:h2:mem:internet-banking-utility-payment-service
-    username: root
-    password: password
+    username: sa
+    password: ""
     driver-class-name: org.h2.Driver
   jpa:
     hibernate:

@@ -52,6 +52,17 @@ Whole suite related postman collection can be sync using this URL.
 
 Clone this postman collection and switch to the `LOCAL_DOCKER_SETUP` Environment.
 
+#### Secrets
+
+No credentials are committed to this repository. Before starting the stack, copy
+`docker-compose/.env.example` to `docker-compose/.env` (git-ignored) and fill in every value:
+Keycloak admin and database passwords, the two realm client secrets (substituted into
+`docker-compose/keycloak/realm-export.json` as `${IB_API_CLIENT_SECRET}` / `${IB_KC_API_CLIENT_SECRET}`
+when Keycloak imports the realm), the seeded `ib_admin@javatodev.com` password, and the MySQL root
+and application-user passwords. `docker compose` refuses to start if any of them is missing.
+The services read their own datasource/Keycloak secrets from the config server, so the config
+repository it serves must carry the same `MYSQL_APP_USER_PASSWORD` and `IB_API_CLIENT_SECRET` values.
+
 #### Test Data
 
 By default we have dummy accounts details with user details under core-banking-database. Also the keycloak instance will deployed with default dataset matched to the application with all the realm, client and user data sets.
@@ -59,7 +70,7 @@ By default we have dummy accounts details with user details under core-banking-d
 Proceed the testings with `AUTHENTICATION` API request under BANKING_CORE_MICROSERVICES COLLECTION.
 
 ```
-Test Credentials : ib_admin@javatodev.com / 5V7huE3G86uB
+Test Credentials : ib_admin@javatodev.com / the IB_ADMIN_USER_PASSWORD you set in docker-compose/.env
 ```
 
 ### Contribution
