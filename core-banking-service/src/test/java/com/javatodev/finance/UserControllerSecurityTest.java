@@ -47,6 +47,12 @@ class UserControllerSecurityTest {
     }
 
     @Test
+    void gatewayIdentityHeaderAloneIsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/v1/user/123456789").header("X-Auth-Id", "some-user"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void anonymousUserListIsUnauthorized() throws Exception {
         mockMvc.perform(get("/api/v1/user"))
                 .andExpect(status().isUnauthorized());
