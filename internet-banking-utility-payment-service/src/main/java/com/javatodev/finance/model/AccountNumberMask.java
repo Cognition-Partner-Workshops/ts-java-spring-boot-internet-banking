@@ -3,6 +3,7 @@ package com.javatodev.finance.model;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.javatodev.finance.model.dto.UtilityPayment;
 import java.io.IOException;
 import java.util.regex.Pattern;
 
@@ -26,7 +27,10 @@ public class AccountNumberMask extends JsonSerializer<String> {
     public static class ReferenceSerializer extends JsonSerializer<String> {
         @Override
         public void serialize(String value, JsonGenerator output, SerializerProvider provider) throws IOException {
-            output.writeString(redact(value));
+            Object owner = output.getCurrentValue();
+            boolean isAccount = owner instanceof UtilityPayment
+                    && value.equals(((UtilityPayment) owner).getAccount());
+            output.writeString(isAccount ? mask(value) : value);
         }
     }
 }
