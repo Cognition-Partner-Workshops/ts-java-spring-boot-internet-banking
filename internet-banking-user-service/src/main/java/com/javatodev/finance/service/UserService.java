@@ -1,5 +1,6 @@
 package com.javatodev.finance.service;
 
+import com.javatodev.finance.configuration.security.AuthenticatedCaller;
 import com.javatodev.finance.exception.*;
 import com.javatodev.finance.model.dto.Status;
 import com.javatodev.finance.model.dto.User;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -94,6 +96,9 @@ public class UserService {
     }
 
     public User updateUser(Long id, UserUpdateRequest userUpdateRequest) {
+        if (!AuthenticatedCaller.isStaff()) {
+            throw new AccessDeniedException("Only bank staff can change registration status");
+        }
         UserEntity userEntity = userRepository.findById(id).orElseThrow(EntityNotFoundException::new);
 
         if (userUpdateRequest.getStatus() == Status.APPROVED) {

@@ -1,3 +1,13 @@
 spring:
   application:
     name: core-banking-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/javatodev-internet-banking/protocol/openid-connect/certs}
+
+app:
+  security:
+    allowed-client-ids: ${APP_SECURITY_ALLOWED_CLIENT_IDS:javatodev-internet-banking-api-client,javatodev-internet-banking-kc-api-client}
+    internal-client-id: ${APP_SECURITY_INTERNAL_CLIENT_ID:javatodev-internet-banking-kc-api-client}

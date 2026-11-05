@@ -20,6 +20,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                         .build());
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    protected ResponseEntity handleAccessDenied(Exception e, Locale locale) {
+        return ResponseEntity
+                .status(org.springframework.http.HttpStatus.FORBIDDEN)
+                .body(ErrorResponse.builder().code("ACCESS_DENIED").message(e.getMessage()).build());
+    }
+
     @ExceptionHandler({Exception.class})
     protected ResponseEntity handleException(Exception e, Locale locale) {
         return ResponseEntity

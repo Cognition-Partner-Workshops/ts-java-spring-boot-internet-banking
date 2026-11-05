@@ -26,6 +26,7 @@ class TransactionServiceTest {
     private AccountService accountService;
     private BankAccountRepository bankAccountRepository;
     private TransactionRepository transactionRepository;
+    private AccountOwnershipService accountOwnershipService;
     private TransactionService transactionService;
 
     @BeforeEach
@@ -33,7 +34,8 @@ class TransactionServiceTest {
         accountService = mock(AccountService.class);
         bankAccountRepository = mock(BankAccountRepository.class);
         transactionRepository = mock(TransactionRepository.class);
-        transactionService = new TransactionService(accountService, bankAccountRepository, transactionRepository);
+        accountOwnershipService = mock(AccountOwnershipService.class);
+        transactionService = new TransactionService(accountService, bankAccountRepository, transactionRepository, accountOwnershipService);
     }
 
     @Test

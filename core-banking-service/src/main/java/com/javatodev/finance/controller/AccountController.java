@@ -1,5 +1,6 @@
 package com.javatodev.finance.controller;
 
+import com.javatodev.finance.service.AccountOwnershipService;
 import com.javatodev.finance.service.AccountService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,11 +22,13 @@ import lombok.extern.slf4j.Slf4j;
 public class AccountController {
 
     private final AccountService accountService;
+    private final AccountOwnershipService accountOwnershipService;
 
     @Operation(summary = "Get Bank Account by Account Number", description = "Retrieve bank account details by account number")
     @GetMapping("/bank-account/{account_number}")
     public ResponseEntity getBankAccount(@PathVariable("account_number") String accountNumber) {
         log.info("Reading account by ID {}", accountNumber);
+        accountOwnershipService.requireCallerOwnsAccount(accountNumber);
         return ResponseEntity.ok(accountService.readBankAccount(accountNumber));
     }
 

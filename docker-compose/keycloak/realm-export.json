@@ -83,6 +83,15 @@
         "clientRole": false,
         "containerId": "4f3cf5dd-5fed-40a3-90d4-b790bbf86d28",
         "attributes": {}
+      },
+      {
+        "id": "9b1f3c52-2d7e-4f51-9a3e-6c2f0b8d4e17",
+        "name": "bank_admin",
+        "description": "Bank staff: approve registrations and view the customer directory. Grants no access to customer accounts.",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "4f3cf5dd-5fed-40a3-90d4-b790bbf86d28",
+        "attributes": {}
       }
     ],
     "client": {
@@ -484,6 +493,10 @@
       "firstName": "Javatodev",
       "lastName": "Admin",
       "email": "ib_admin@javatodev.com",
+      "realmRoles": [
+        "default-roles-javatodev-internet-banking",
+        "bank_admin"
+      ],
       "disableableCredentialTypes": [],
       "requiredActions": [],
       "notBefore": 0,

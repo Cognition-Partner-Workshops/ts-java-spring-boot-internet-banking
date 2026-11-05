@@ -9,5 +9,4 @@ public class FundTransferRequest {
     private String fromAccount;
     private String toAccount;
     private BigDecimal amount;
-    private String authID;
 }

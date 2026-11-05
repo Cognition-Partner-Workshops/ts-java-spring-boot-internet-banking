@@ -6,8 +6,6 @@ import org.springframework.context.annotation.Configuration;
 
 import java.security.Principal;
 
-import reactor.core.publisher.Mono;
-
 @Configuration
 public class GatewayConfiguration {
 
@@ -16,15 +14,12 @@ public class GatewayConfiguration {
 
     @Bean
     public GlobalFilter customGlobalFilter() {
-        return (exchange, chain) -> exchange.getPrincipal().map(Principal::getName).defaultIfEmpty(UNAUTHORIZED_USER_NAME).map(principal -> {
-            // adds header to proxied request
-            exchange.getRequest().mutate()
-                .header(HTTP_HEADER_AUTH_USER_ID, principal)
-                .build();
-            return exchange;
-        }).flatMap(chain::filter).then(Mono.fromRunnable(() -> {
-
-        }));
+        // Replace any client-supplied X-Auth-Id with the authenticated principal (JWT subject).
+        return (exchange, chain) -> exchange.getPrincipal()
+            .map(Principal::getName)
+            .defaultIfEmpty(UNAUTHORIZED_USER_NAME)
+            .flatMap(principal -> chain.filter(exchange.mutate()
+                .request(request -> request.headers(headers -> headers.set(HTTP_HEADER_AUTH_USER_ID, principal)))
+                .build()));
     }
-
 }

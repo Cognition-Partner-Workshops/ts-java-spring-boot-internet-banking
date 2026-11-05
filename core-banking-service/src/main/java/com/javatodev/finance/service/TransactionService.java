@@ -3,6 +3,7 @@ package com.javatodev.finance.service;
 import com.javatodev.finance.exception.EntityNotFoundException;
 import com.javatodev.finance.exception.GlobalErrorCode;
 import com.javatodev.finance.exception.InsufficientFundsException;
+import com.javatodev.finance.exception.InvalidTransactionException;
 import com.javatodev.finance.model.TransactionType;
 import com.javatodev.finance.model.dto.BankAccount;
 import com.javatodev.finance.model.dto.UtilityAccount;
@@ -31,8 +32,16 @@ public class TransactionService {
     private final AccountService accountService;
     private final BankAccountRepository bankAccountRepository;
     private final TransactionRepository transactionRepository;
+    private final AccountOwnershipService accountOwnershipService;
 
     public FundTransferResponse fundTransfer(FundTransferRequest fundTransferRequest) {
+
+        validateAmount(fundTransferRequest.getAmount());
+        if (fundTransferRequest.getFromAccount() == null
+            || fundTransferRequest.getFromAccount().equals(fundTransferRequest.getToAccount())) {
+            throw new InvalidTransactionException("Source and destination accounts must be different");
+        }
+        accountOwnershipService.requireCallerOwnsActiveAccount(fundTransferRequest.getFromAccount());
 
         BankAccount fromBankAccount = accountService.readBankAccount(fundTransferRequest.getFromAccount());
         BankAccount toBankAccount = accountService.readBankAccount(fundTransferRequest.getToAccount());
@@ -46,6 +55,9 @@ public class TransactionService {
     }
 
     public UtilityPaymentResponse utilPayment(UtilityPaymentRequest utilityPaymentRequest) {
+
+        validateAmount(utilityPaymentRequest.getAmount());
+        accountOwnershipService.requireCallerOwnsActiveAccount(utilityPaymentRequest.getAccount());
 
         String transactionId = UUID.randomUUID().toString();
 
@@ -72,6 +84,15 @@ public class TransactionService {
         return UtilityPaymentResponse.builder().message("Utility payment successfully completed")
             .transactionId(transactionId).build();
 
+    }
+
+    private void validateAmount(BigDecimal amount) {
+        if (amount == null || amount.signum() <= 0) {
+            throw new InvalidTransactionException("Transaction amount must be greater than zero");
+        }
+        if (amount.stripTrailingZeros().scale() > 2) {
+            throw new InvalidTransactionException("Transaction amount must not have more than two decimal places");
+        }
     }
 
     private void validateBalance(BankAccount bankAccount, BigDecimal amount) {

@@ -1,5 +1,6 @@
 package com.javatodev.finance.exception;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -9,6 +10,16 @@ import java.util.Locale;
 
 @ControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
+
+    @ExceptionHandler(AccountAccessDeniedException.class)
+    protected ResponseEntity handleAccountAccessDenied(AccountAccessDeniedException exception, Locale locale) {
+        return ResponseEntity
+            .status(HttpStatus.FORBIDDEN)
+            .body(ErrorResponse.builder()
+                .code(exception.getCode())
+                .message(exception.getMessage())
+                .build());
+    }
 
     @ExceptionHandler(SimpleBankingGlobalException.class)
     protected ResponseEntity handleGlobalException(SimpleBankingGlobalException simpleBankingGlobalException, Locale locale) {
