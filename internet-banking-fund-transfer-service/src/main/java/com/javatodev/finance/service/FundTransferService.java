@@ -1,6 +1,7 @@
 package com.javatodev.finance.service;
 
 import com.javatodev.finance.model.TransactionStatus;
+import com.javatodev.finance.model.AccountNumberMask;
 import com.javatodev.finance.model.dto.FundTransfer;
 import com.javatodev.finance.model.dto.request.FundTransferRequest;
 import com.javatodev.finance.model.dto.response.FundTransferResponse;
@@ -29,7 +30,8 @@ public class FundTransferService {
     private FundTransferMapper mapper = new FundTransferMapper();
 
     public FundTransferResponse fundTransfer(FundTransferRequest request) {
-        log.info("Sending fund transfer request {}" + request.toString());
+        log.info("Sending fund transfer request from {} to {}", AccountNumberMask.mask(request.getFromAccount()),
+            AccountNumberMask.mask(request.getToAccount()));
 
         FundTransferEntity entity = new FundTransferEntity();
         BeanUtils.copyProperties(request, entity);

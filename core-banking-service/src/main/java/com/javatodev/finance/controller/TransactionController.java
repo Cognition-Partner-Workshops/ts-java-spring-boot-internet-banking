@@ -3,6 +3,7 @@ package com.javatodev.finance.controller;
 import com.javatodev.finance.model.dto.request.FundTransferRequest;
 import com.javatodev.finance.model.dto.request.UtilityPaymentRequest;
 import com.javatodev.finance.service.TransactionService;
+import com.javatodev.finance.model.AccountNumberMask;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,7 +29,8 @@ public class TransactionController {
     @PostMapping("/fund-transfer")
     public ResponseEntity fundTransfer(@RequestBody FundTransferRequest fundTransferRequest) {
 
-        log.info("Fund transfer initiated in core bank from {}", fundTransferRequest.toString());
+        log.info("Fund transfer initiated in core bank from {} to {}", AccountNumberMask.mask(fundTransferRequest.getFromAccount()),
+            AccountNumberMask.mask(fundTransferRequest.getToAccount()));
         return ResponseEntity.ok(transactionService.fundTransfer(fundTransferRequest));
 
     }
@@ -37,7 +39,7 @@ public class TransactionController {
     @PostMapping("/util-payment")
     public ResponseEntity utilPayment(@RequestBody UtilityPaymentRequest utilityPaymentRequest) {
 
-        log.info("Utility Payment initiated in core bank from {}", utilityPaymentRequest.toString());
+        log.info("Utility Payment initiated in core bank from {}", AccountNumberMask.mask(utilityPaymentRequest.getAccount()));
         return ResponseEntity.ok(transactionService.utilPayment(utilityPaymentRequest));
 
     }

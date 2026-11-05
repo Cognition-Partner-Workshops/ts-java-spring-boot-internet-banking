@@ -2,6 +2,7 @@ package com.javatodev.finance.controller;
 
 import com.javatodev.finance.model.dto.request.FundTransferRequest;
 import com.javatodev.finance.service.FundTransferService;
+import com.javatodev.finance.model.AccountNumberMask;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,7 +29,8 @@ public class FundTransferController {
     @Operation(summary = "Send Fund Transfer", description = "Process a fund transfer request")
     @PostMapping
     public ResponseEntity sendFundTransfer(@RequestBody FundTransferRequest fundTransferRequest) {
-        log.info("Got fund transfer request from API {}", fundTransferRequest.toString());
+        log.info("Got fund transfer request from API from {} to {}", AccountNumberMask.mask(fundTransferRequest.getFromAccount()),
+            AccountNumberMask.mask(fundTransferRequest.getToAccount()));
         return ResponseEntity.ok(fundTransferService.fundTransfer(fundTransferRequest));
     }
 
