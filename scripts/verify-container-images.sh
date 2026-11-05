@@ -24,7 +24,7 @@ verify_service() {
   configured_user=$(docker inspect -f '{{.Config.User}}' "$image") || return 1
   case "${configured_user%%:*}" in ''|root|0) return 1 ;; esac
   docker run --rm --entrypoint sh "$image" -c \
-    'test -r /app.jar && test -r /wait-for-it.sh && test -x /wait-for-it.sh && test -x ./wait-for-it.sh' || return 1
+    'test -r /app.jar && test -r /wait-for-it.sh && test -x /wait-for-it.sh && test -x ./wait-for-it.sh && test -d "$HOME" && test -w "$HOME"' || return 1
 }
 
 for service in "${services[@]}"; do
