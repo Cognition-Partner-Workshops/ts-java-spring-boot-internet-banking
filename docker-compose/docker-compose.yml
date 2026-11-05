@@ -70,8 +70,9 @@ services:
   internet-banking-service-registry:
     image: javatodev/internet-banking-service-registry
     container_name: internet-banking-service-registry
-    ports:
-      - 8081:8081
+    # Registry has no authentication; keep it on javatodev_ib_network only.
+    expose:
+      - "8081"
     networks:
       javatodev_ib_network:
         ipv4_address: 172.25.0.7
@@ -89,8 +90,11 @@ services:
   internet-banking-user-service:
     image: javatodev/internet-banking-user-service
     container_name: internet-banking-user-service
-    ports:
-      - 8083:8083
+    # Reachable only on javatodev_ib_network via the API gateway; do not publish to the host.
+    expose:
+      - "8083"
+    environment:
+      KEYCLOAK_JWK_SET_URI: http://172.25.0.11:8080/realms/javatodev-internet-banking/protocol/openid-connect/certs
     entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "mysql_core_db:3306", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
     networks:
       javatodev_ib_network:
@@ -99,8 +103,11 @@ services:
   internet-banking-fund-transfer-service:
     image: javatodev/internet-banking-fund-transfer-service
     container_name: internet-banking-fund-transfer-service
-    ports:
-      - 8084:8084
+    # Reachable only on javatodev_ib_network via the API gateway; do not publish to the host.
+    expose:
+      - "8084"
+    environment:
+      KEYCLOAK_JWK_SET_URI: http://172.25.0.11:8080/realms/javatodev-internet-banking/protocol/openid-connect/certs
     entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "mysql_core_db:3306", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
     networks:
       javatodev_ib_network:
@@ -109,8 +116,11 @@ services:
   internet-banking-utility-payment-service:
     container_name: internet-banking-utility-payment-service
     image: javatodev/internet-banking-utility-payment-service
-    ports:
-      - 8085:8085
+    # Reachable only on javatodev_ib_network via the API gateway; do not publish to the host.
+    expose:
+      - "8085"
+    environment:
+      KEYCLOAK_JWK_SET_URI: http://172.25.0.11:8080/realms/javatodev-internet-banking/protocol/openid-connect/certs
     entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "mysql_core_db:3306", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
     networks:
       javatodev_ib_network:
@@ -119,8 +129,11 @@ services:
   core-banking-service:
     image: javatodev/core-banking-service
     container_name: core-banking-service
-    ports:
-      - 8092:8092
+    # Reachable only on javatodev_ib_network via the API gateway; do not publish to the host.
+    expose:
+      - "8092"
+    environment:
+      KEYCLOAK_JWK_SET_URI: http://172.25.0.11:8080/realms/javatodev-internet-banking/protocol/openid-connect/certs
     entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "mysql_core_db:3306", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
     networks:
       javatodev_ib_network:

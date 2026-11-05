@@ -1,5 +1,6 @@
 package com.javatodev.finance.service;
 
+import com.javatodev.finance.configuration.security.AuthenticatedCaller;
 import com.javatodev.finance.exception.*;
 import com.javatodev.finance.model.dto.Status;
 import com.javatodev.finance.model.dto.User;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -64,10 +66,12 @@ public class UserService {
                 log.info("User created under given username {}", user.getEmail());
 
                 List<UserRepresentation> userRepresentations1 = keycloakUserService.readUserByEmail(user.getEmail());
-                user.setAuthId(userRepresentations1.get(0).getId());
-                user.setStatus(Status.PENDING);
-                user.setIdentification(userResponse.getIdentificationNumber());
-                UserEntity save = userRepository.save(userMapper.convertToEntity(user));
+                // Build a new record from server-side values only; client id/version/authId/status are ignored.
+                UserEntity registration = new UserEntity();
+                registration.setAuthId(userRepresentations1.get(0).getId());
+                registration.setStatus(Status.PENDING);
+                registration.setIdentification(userResponse.getIdentificationNumber());
+                UserEntity save = userRepository.save(registration);
                 return userMapper.convertToDto(save);
             }
 
@@ -94,6 +98,9 @@ public class UserService {
     }
 
     public User updateUser(Long id, UserUpdateRequest userUpdateRequest) {
+        if (!AuthenticatedCaller.isStaff()) {
+            throw new AccessDeniedException("Only bank staff can change registration status");
+        }
         UserEntity userEntity = userRepository.findById(id).orElseThrow(EntityNotFoundException::new);
 
         if (userUpdateRequest.getStatus() == Status.APPROVED) {

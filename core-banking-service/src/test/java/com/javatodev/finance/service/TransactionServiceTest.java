@@ -26,6 +26,7 @@ class TransactionServiceTest {
     private AccountService accountService;
     private BankAccountRepository bankAccountRepository;
     private TransactionRepository transactionRepository;
+    private AccountOwnershipService accountOwnershipService;
     private TransactionService transactionService;
 
     @BeforeEach
@@ -33,7 +34,8 @@ class TransactionServiceTest {
         accountService = mock(AccountService.class);
         bankAccountRepository = mock(BankAccountRepository.class);
         transactionRepository = mock(TransactionRepository.class);
-        transactionService = new TransactionService(accountService, bankAccountRepository, transactionRepository);
+        accountOwnershipService = mock(AccountOwnershipService.class);
+        transactionService = new TransactionService(accountService, bankAccountRepository, transactionRepository, accountOwnershipService);
     }
 
     @Test
@@ -55,11 +57,13 @@ class TransactionServiceTest {
         BankAccountEntity fromEntity = new BankAccountEntity();
         fromEntity.setNumber("A1");
         fromEntity.setActualBalance(BigDecimal.valueOf(200));
+        fromEntity.setAvailableBalance(BigDecimal.valueOf(200));
         BankAccountEntity toEntity = new BankAccountEntity();
         toEntity.setNumber("A2");
         toEntity.setActualBalance(BigDecimal.valueOf(50));
-        when(bankAccountRepository.findByNumber("A1")).thenReturn(Optional.of(fromEntity));
-        when(bankAccountRepository.findByNumber("A2")).thenReturn(Optional.of(toEntity));
+        toEntity.setAvailableBalance(BigDecimal.valueOf(50));
+        when(bankAccountRepository.findByNumberForUpdate("A1")).thenReturn(Optional.of(fromEntity));
+        when(bankAccountRepository.findByNumberForUpdate("A2")).thenReturn(Optional.of(toEntity));
 
         FundTransferResponse response = transactionService.fundTransfer(request);
         assertNotNull(response.getTransactionId());
@@ -111,7 +115,7 @@ class TransactionServiceTest {
         fromEntity.setNumber("A1");
         fromEntity.setActualBalance(BigDecimal.valueOf(100));
         fromEntity.setAvailableBalance(BigDecimal.valueOf(100));
-        when(bankAccountRepository.findByNumber("A1")).thenReturn(Optional.of(fromEntity));
+        when(bankAccountRepository.findByNumberForUpdate("A1")).thenReturn(Optional.of(fromEntity));
         UtilityPaymentResponse response = transactionService.utilPayment(request);
         assertNotNull(response.getTransactionId());
         assertEquals("Utility payment successfully completed", response.getMessage());
@@ -156,8 +160,8 @@ class TransactionServiceTest {
         toEntity.setNumber("A2");
         toEntity.setActualBalance(BigDecimal.valueOf(50));
         toEntity.setAvailableBalance(BigDecimal.valueOf(50));
-        when(bankAccountRepository.findByNumber("A1")).thenReturn(Optional.of(fromEntity));
-        when(bankAccountRepository.findByNumber("A2")).thenReturn(Optional.of(toEntity));
+        when(bankAccountRepository.findByNumberForUpdate("A1")).thenReturn(Optional.of(fromEntity));
+        when(bankAccountRepository.findByNumberForUpdate("A2")).thenReturn(Optional.of(toEntity));
         String transactionId = transactionService.internalFundTransfer(from, to, BigDecimal.valueOf(100));
         assertNotNull(transactionId);
         verify(bankAccountRepository, times(2)).save(any(BankAccountEntity.class));
@@ -170,7 +174,7 @@ class TransactionServiceTest {
         from.setNumber("A1");
         BankAccount to = new BankAccount();
         to.setNumber("A2");
-        when(bankAccountRepository.findByNumber("A1")).thenReturn(Optional.empty());
+        when(bankAccountRepository.findByNumberForUpdate("A1")).thenReturn(Optional.empty());
         assertThrows(EntityNotFoundException.class, () -> transactionService.internalFundTransfer(from, to, BigDecimal.valueOf(100)));
     }
 

@@ -1,5 +1,6 @@
 package com.javatodev.finance.service;
 
+import com.javatodev.finance.configuration.security.AuthenticatedCaller;
 import com.javatodev.finance.model.TransactionStatus;
 import com.javatodev.finance.model.dto.UtilityPayment;
 import com.javatodev.finance.model.entity.UtilityPaymentEntity;
@@ -31,8 +32,13 @@ public class UtilityPaymentService {
     public UtilityPaymentResponse utilPayment(UtilityPaymentRequest paymentRequest) {
         log.info("Utility payment processing {}", paymentRequest.toString());
 
+        TransactionAmountValidator.requireValidAmount(paymentRequest.getAmount());
+        // Core banking answers 403 unless the authenticated caller owns the debited account.
+        bankingCoreRestClient.readAccount(paymentRequest.getAccount());
+
         UtilityPaymentEntity entity = new UtilityPaymentEntity();
         BeanUtils.copyProperties(paymentRequest, entity);
+        entity.setOwnerId(AuthenticatedCaller.subject());
         entity.setStatus(TransactionStatus.PROCESSING);
         UtilityPaymentEntity optUtilPayment = utilityPaymentRepository.save(entity);
 
@@ -47,7 +53,9 @@ public class UtilityPaymentService {
     }
 
     public List<UtilityPayment> readPayments(Pageable pageable) {
-        Page<UtilityPaymentEntity> allUtilPayments = utilityPaymentRepository.findAll(pageable);
+        Page<UtilityPaymentEntity> allUtilPayments = AuthenticatedCaller.isStaff()
+            ? utilityPaymentRepository.findAll(pageable)
+            : utilityPaymentRepository.findAllByOwnerId(AuthenticatedCaller.subject(), pageable);
         return utilityPaymentMapper.convertToDtoList(allUtilPayments.getContent());
     }
 }

@@ -62,6 +62,8 @@ Proceed the testings with `AUTHENTICATION` API request under BANKING_CORE_MICROS
 Test Credentials : ib_admin@javatodev.com / 5V7huE3G86uB
 ```
 
+The imported realm grants no one the `bank_admin` staff role (registration approval and customer directory). Provision it out of band in the Keycloak admin console (Users → user → Role mapping → assign `bank_admin`) only to staff accounts whose credentials are not committed. The role never grants access to customer accounts.
+
 ### Contribution
 
 ### Microservices Inside This Project
