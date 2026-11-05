@@ -28,9 +28,9 @@ public class AccountNumberMask extends JsonSerializer<String> {
         @Override
         public void serialize(String value, JsonGenerator output, SerializerProvider provider) throws IOException {
             Object owner = output.getCurrentValue();
-            boolean isAccount = owner instanceof UtilityPayment
-                    && value.equals(((UtilityPayment) owner).getAccount());
-            output.writeString(isAccount ? mask(value) : value);
+            String account = owner instanceof UtilityPayment ? ((UtilityPayment) owner).getAccount() : null;
+            output.writeString(value == null || account == null || account.isEmpty()
+                    ? value : value.replace(account, mask(account)));
         }
     }
 }

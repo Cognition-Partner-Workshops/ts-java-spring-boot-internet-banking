@@ -44,4 +44,40 @@ class UtilityPaymentReferenceTest {
             else assertEquals(reference, value.asText());
         }
     }
+
+    @Test
+    void embeddedPayerAccountsAreMaskedWithoutChangingBillDigitsOrModelValues() throws Exception {
+        UtilityPayment payment = new UtilityPayment();
+        payment.setAccount("001234567890");
+        for (String reference : new String[] {
+                "BILL-12345678 payer=001234567890",
+                "001234567890/12345678/001234567890",
+                "REF12345678001234567890END"}) {
+            payment.setReferenceNumber(reference);
+            String output = json.readTree(json.writeValueAsString(payment)).get("referenceNumber").asText();
+            assertEquals(reference.replace("001234567890", "****7890"), output);
+            assertTrue(output.contains("12345678"));
+            assertEquals(reference, payment.getReferenceNumber());
+            assertEquals("001234567890", payment.getAccount());
+        }
+    }
+
+    @Test
+    void missingPayerAccountsDoNotChangeProviderReferences() throws Exception {
+        UtilityPayment payment = new UtilityPayment();
+        payment.setReferenceNumber("BILL-12345678");
+        for (String account : new String[] {null, ""}) {
+            payment.setAccount(account);
+            assertEquals("BILL-12345678", json.readTree(json.writeValueAsString(payment)).get("referenceNumber").asText());
+        }
+    }
+
+    @Test
+    void payerAccountReplacementIsLiteralNotARegularExpression() throws Exception {
+        UtilityPayment payment = new UtilityPayment();
+        payment.setAccount("AB.1234");
+        payment.setReferenceNumber("BILL-12345678 ABX1234 AB.1234");
+        assertEquals("BILL-12345678 ABX1234 ****1234",
+                json.readTree(json.writeValueAsString(payment)).get("referenceNumber").asText());
+    }
 }
