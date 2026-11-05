@@ -55,9 +55,11 @@ public class FundTransferService {
         try {
             fundTransferResponse = bankingCoreFeignClient.fundTransfer(coreRequest);
         } catch (RuntimeException exception) {
-            optFundTransfer.setStatus(TransactionStatus.FAILED);
-            fundTransferRepository.save(optFundTransfer);
             if (exception instanceof FeignException feignException) {
+                if (feignException.status() >= 400 && feignException.status() < 500) {
+                    optFundTransfer.setStatus(TransactionStatus.FAILED);
+                    fundTransferRepository.save(optFundTransfer);
+                }
                 throw accessDeniedIfUnauthorized(feignException);
             }
             throw exception;

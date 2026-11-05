@@ -125,7 +125,9 @@ public class UserService {
         UserEntity updatedUser = userRepository.saveAndFlush(userEntity);
 
         if (updatedStatus == Status.APPROVED && hasAuthId) {
-            registerApprovalRollbackCompensation(authId);
+            if (previousStatus != Status.APPROVED) {
+                registerApprovalRollbackCompensation(authId);
+            }
             UserRepresentation userRepresentation = keycloakUserService.readUser(authId);
             userRepresentation.setEnabled(true);
             userRepresentation.setEmailVerified(true);

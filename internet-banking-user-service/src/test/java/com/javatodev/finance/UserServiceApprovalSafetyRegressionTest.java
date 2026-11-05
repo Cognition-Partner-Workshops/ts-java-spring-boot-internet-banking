@@ -12,8 +12,11 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.api.Test;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.mockito.InOrder;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -129,6 +132,67 @@ class UserServiceApprovalSafetyRegressionTest {
             () -> order.verify(keycloakUsers).updateUser(any(UserRepresentation.class)),
             () -> order.verify(keycloakUsers).grantBankCustomerRole(AUTH_ID)
         );
+    }
+
+    @Test
+    void repeatedApprovalRollbackDoesNotRevokeExistingCustomer() {
+        KeycloakUserService keycloakUsers = mock(KeycloakUserService.class);
+        UserRepository repository = mock(UserRepository.class);
+        BankingCoreRestClient core = mock(BankingCoreRestClient.class);
+        UserEntity entity = approvedUser();
+        RuntimeException grantFailure = new IllegalStateException("Keycloak grant failed");
+        when(repository.findById(USER_ID)).thenReturn(Optional.of(entity));
+        when(repository.saveAndFlush(any(UserEntity.class))).thenAnswer(call -> call.getArgument(0));
+        when(keycloakUsers.readUser(AUTH_ID)).thenReturn(userRepresentation(true));
+        doThrow(grantFailure).when(keycloakUsers).grantBankCustomerRole(AUTH_ID);
+        UserService service = new UserService(keycloakUsers, repository, core);
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            assertSame(grantFailure, assertThrows(RuntimeException.class,
+                () -> service.updateUser(USER_ID, update(Status.APPROVED))));
+            TransactionSynchronizationManager.getSynchronizations().forEach(
+                synchronization -> synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+
+            verify(keycloakUsers, never()).revokeBankCustomerRole(AUTH_ID);
+            verify(keycloakUsers, never()).updateUser(argThat(updated -> Boolean.FALSE.equals(updated.isEnabled())));
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void pendingApprovalRollbackStillCompensatesKeycloak() {
+        KeycloakUserService keycloakUsers = mock(KeycloakUserService.class);
+        UserRepository repository = mock(UserRepository.class);
+        BankingCoreRestClient core = mock(BankingCoreRestClient.class);
+        UserEntity entity = approvedUser();
+        entity.setStatus(Status.PENDING);
+        RuntimeException grantFailure = new IllegalStateException("Keycloak grant failed");
+        when(repository.findById(USER_ID)).thenReturn(Optional.of(entity));
+        when(repository.saveAndFlush(any(UserEntity.class))).thenAnswer(call -> call.getArgument(0));
+        when(keycloakUsers.readUser(AUTH_ID)).thenReturn(userRepresentation(false));
+        List<Boolean> enabledStates = new ArrayList<>();
+        doAnswer(call -> {
+            enabledStates.add(((UserRepresentation) call.getArgument(0)).isEnabled());
+            return null;
+        }).when(keycloakUsers).updateUser(any(UserRepresentation.class));
+        doThrow(grantFailure).when(keycloakUsers).grantBankCustomerRole(AUTH_ID);
+        UserService service = new UserService(keycloakUsers, repository, core);
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            assertSame(grantFailure, assertThrows(RuntimeException.class,
+                () -> service.updateUser(USER_ID, update(Status.APPROVED))));
+            TransactionSynchronizationManager.getSynchronizations().forEach(
+                synchronization -> synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+
+            verify(keycloakUsers).revokeBankCustomerRole(AUTH_ID);
+            assertEquals(List.of(true, false), enabledStates,
+                "expected enable then rollback-disable calls; observed " + enabledStates);
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     @Test

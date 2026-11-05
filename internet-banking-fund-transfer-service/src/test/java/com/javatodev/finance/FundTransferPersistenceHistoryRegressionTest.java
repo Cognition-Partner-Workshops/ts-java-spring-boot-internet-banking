@@ -8,6 +8,10 @@ import com.javatodev.finance.model.entity.FundTransferEntity;
 import com.javatodev.finance.model.repository.FundTransferRepository;
 import com.javatodev.finance.service.FundTransferService;
 import com.javatodev.finance.service.rest.client.BankingCoreFeignClient;
+import feign.FeignException;
+import feign.Request;
+import feign.Response;
+import feign.RetryableException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +30,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.net.SocketTimeoutException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -107,10 +112,10 @@ class FundTransferPersistenceHistoryRegressionTest {
 
     @Test
     void coreCallFailurePersistsFailedHistory() {
-        IllegalStateException coreFailure = new IllegalStateException("core transfer failed");
+        FeignException coreFailure = badRequest();
         when(core.fundTransfer(any())).thenThrow(coreFailure);
 
-        IllegalStateException observed = assertThrows(IllegalStateException.class,
+        FeignException observed = assertThrows(FeignException.class,
             () -> service.fundTransfer(request()));
         List<FundTransferEntity> rows = repository.findAll();
 
@@ -123,6 +128,39 @@ class FundTransferPersistenceHistoryRegressionTest {
             () -> assertEquals(OWNER_ID, rows.isEmpty() ? null : rows.get(0).getOwnerId(),
                 "persisted ownerId observed " + (rows.isEmpty() ? null : rows.get(0).getOwnerId()))
         );
+    }
+
+    @Test
+    void coreTimeoutLeavesCommittedPendingHistory() {
+        RetryableException timeout = new RetryableException(-1, "core transfer timed out",
+            Request.HttpMethod.POST, new SocketTimeoutException("core transfer timed out"), (Long) null,
+            feignRequest());
+        when(core.fundTransfer(any())).thenThrow(timeout);
+
+        RetryableException observed = assertThrows(RetryableException.class,
+            () -> service.fundTransfer(request()));
+        List<FundTransferEntity> rows = repository.findAll();
+
+        assertAll(
+            () -> assertSame(timeout, observed),
+            () -> assertEquals(1, rows.size(),
+                "expected committed history row after core timeout; observed " + rows.size()),
+            () -> assertEquals(TransactionStatus.PENDING, rows.isEmpty() ? null : rows.get(0).getStatus(),
+                "persisted status observed " + (rows.isEmpty() ? null : rows.get(0).getStatus())),
+            () -> assertEquals(OWNER_ID, rows.isEmpty() ? null : rows.get(0).getOwnerId(),
+                "persisted ownerId observed " + (rows.isEmpty() ? null : rows.get(0).getOwnerId()))
+        );
+    }
+
+    private FeignException badRequest() {
+        Response response = Response.builder().status(400).reason("Bad Request")
+            .request(feignRequest()).headers(Map.of()).build();
+        return FeignException.errorStatus("fundTransfer", response);
+    }
+
+    private Request feignRequest() {
+        return Request.create(Request.HttpMethod.POST, "http://core/api/v1/transaction/fund-transfer",
+            Map.of(), null, null, null);
     }
 
     private void authenticate() {

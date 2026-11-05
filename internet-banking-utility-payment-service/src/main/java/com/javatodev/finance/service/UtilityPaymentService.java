@@ -51,9 +51,11 @@ public class UtilityPaymentService {
         try {
             utilityPaymentResponse = bankingCoreRestClient.utilityPayment(paymentRequest);
         } catch (RuntimeException exception) {
-            optUtilPayment.setStatus(TransactionStatus.FAILED);
-            utilityPaymentRepository.save(optUtilPayment);
             if (exception instanceof FeignException feignException) {
+                if (feignException.status() >= 400 && feignException.status() < 500) {
+                    optUtilPayment.setStatus(TransactionStatus.FAILED);
+                    utilityPaymentRepository.save(optUtilPayment);
+                }
                 throw accessDeniedIfUnauthorized(feignException);
             }
             throw exception;

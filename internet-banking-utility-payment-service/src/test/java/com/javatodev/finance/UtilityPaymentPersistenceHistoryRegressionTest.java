@@ -8,6 +8,10 @@ import com.javatodev.finance.model.rest.response.UtilityPaymentResponse;
 import com.javatodev.finance.repository.UtilityPaymentRepository;
 import com.javatodev.finance.service.UtilityPaymentService;
 import com.javatodev.finance.service.rest.BankingCoreRestClient;
+import feign.FeignException;
+import feign.Request;
+import feign.Response;
+import feign.RetryableException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,6 +30,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.net.SocketTimeoutException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -107,10 +112,10 @@ class UtilityPaymentPersistenceHistoryRegressionTest {
 
     @Test
     void coreCallFailurePersistsFailedHistory() {
-        IllegalStateException coreFailure = new IllegalStateException("core utility payment failed");
+        FeignException coreFailure = badRequest();
         when(core.utilityPayment(any())).thenThrow(coreFailure);
 
-        IllegalStateException observed = assertThrows(IllegalStateException.class,
+        FeignException observed = assertThrows(FeignException.class,
             () -> service.utilPayment(request()));
         List<UtilityPaymentEntity> rows = repository.findAll();
 
@@ -123,6 +128,39 @@ class UtilityPaymentPersistenceHistoryRegressionTest {
             () -> assertEquals(OWNER_ID, rows.isEmpty() ? null : rows.get(0).getOwnerId(),
                 "persisted ownerId observed " + (rows.isEmpty() ? null : rows.get(0).getOwnerId()))
         );
+    }
+
+    @Test
+    void coreTimeoutLeavesCommittedPendingHistory() {
+        RetryableException timeout = new RetryableException(-1, "core utility payment timed out",
+            Request.HttpMethod.POST, new SocketTimeoutException("core utility payment timed out"), (Long) null,
+            feignRequest());
+        when(core.utilityPayment(any())).thenThrow(timeout);
+
+        RetryableException observed = assertThrows(RetryableException.class,
+            () -> service.utilPayment(request()));
+        List<UtilityPaymentEntity> rows = repository.findAll();
+
+        assertAll(
+            () -> assertSame(timeout, observed),
+            () -> assertEquals(1, rows.size(),
+                "expected committed history row after core timeout; observed " + rows.size()),
+            () -> assertEquals(TransactionStatus.PENDING, rows.isEmpty() ? null : rows.get(0).getStatus(),
+                "persisted status observed " + (rows.isEmpty() ? null : rows.get(0).getStatus())),
+            () -> assertEquals(OWNER_ID, rows.isEmpty() ? null : rows.get(0).getOwnerId(),
+                "persisted ownerId observed " + (rows.isEmpty() ? null : rows.get(0).getOwnerId()))
+        );
+    }
+
+    private FeignException badRequest() {
+        Response response = Response.builder().status(400).reason("Bad Request")
+            .request(feignRequest()).headers(Map.of()).build();
+        return FeignException.errorStatus("utilityPayment", response);
+    }
+
+    private Request feignRequest() {
+        return Request.create(Request.HttpMethod.POST, "http://core/api/v1/transaction/util-payment",
+            Map.of(), null, null, null);
     }
 
     private void authenticate() {
