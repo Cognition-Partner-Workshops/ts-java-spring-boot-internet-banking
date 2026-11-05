@@ -493,10 +493,6 @@
       "firstName": "Javatodev",
       "lastName": "Admin",
       "email": "ib_admin@javatodev.com",
-      "realmRoles": [
-        "default-roles-javatodev-internet-banking",
-        "bank_admin"
-      ],
       "disableableCredentialTypes": [],
       "requiredActions": [],
       "notBefore": 0,
