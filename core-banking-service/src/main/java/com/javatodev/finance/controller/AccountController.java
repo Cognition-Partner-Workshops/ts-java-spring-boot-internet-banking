@@ -1,6 +1,7 @@
 package com.javatodev.finance.controller;
 
 import com.javatodev.finance.service.AccountService;
+import com.javatodev.finance.model.AccountNumberMask;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,7 +26,7 @@ public class AccountController {
     @Operation(summary = "Get Bank Account by Account Number", description = "Retrieve bank account details by account number")
     @GetMapping("/bank-account/{account_number}")
     public ResponseEntity getBankAccount(@PathVariable("account_number") String accountNumber) {
-        log.info("Reading account by ID {}", accountNumber);
+        log.info("Reading account by ID {}", AccountNumberMask.mask(accountNumber));
         return ResponseEntity.ok(accountService.readBankAccount(accountNumber));
     }
 

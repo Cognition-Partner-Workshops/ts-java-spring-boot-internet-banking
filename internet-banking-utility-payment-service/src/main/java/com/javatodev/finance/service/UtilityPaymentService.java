@@ -1,6 +1,7 @@
 package com.javatodev.finance.service;
 
 import com.javatodev.finance.model.TransactionStatus;
+import com.javatodev.finance.model.AccountNumberMask;
 import com.javatodev.finance.model.dto.UtilityPayment;
 import com.javatodev.finance.model.entity.UtilityPaymentEntity;
 import com.javatodev.finance.model.mapper.UtilityPaymentMapper;
@@ -29,7 +30,7 @@ public class UtilityPaymentService {
     private UtilityPaymentMapper utilityPaymentMapper = new UtilityPaymentMapper();
 
     public UtilityPaymentResponse utilPayment(UtilityPaymentRequest paymentRequest) {
-        log.info("Utility payment processing {}", paymentRequest.toString());
+        log.info("Utility payment processing for {}", AccountNumberMask.mask(paymentRequest.getAccount()));
 
         UtilityPaymentEntity entity = new UtilityPaymentEntity();
         BeanUtils.copyProperties(paymentRequest, entity);

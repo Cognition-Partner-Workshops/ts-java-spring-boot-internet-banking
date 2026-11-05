@@ -4,6 +4,7 @@ import com.javatodev.finance.exception.EntityNotFoundException;
 import com.javatodev.finance.exception.GlobalErrorCode;
 import com.javatodev.finance.exception.InsufficientFundsException;
 import com.javatodev.finance.model.TransactionType;
+import com.javatodev.finance.model.AccountNumberMask;
 import com.javatodev.finance.model.dto.BankAccount;
 import com.javatodev.finance.model.dto.UtilityAccount;
 import com.javatodev.finance.model.dto.request.FundTransferRequest;
@@ -76,7 +77,7 @@ public class TransactionService {
 
     private void validateBalance(BankAccount bankAccount, BigDecimal amount) {
         if (bankAccount.getActualBalance().compareTo(BigDecimal.ZERO) < 0 || bankAccount.getActualBalance().compareTo(amount) < 0) {
-            throw new InsufficientFundsException("Insufficient funds in the account " + bankAccount.getNumber(), GlobalErrorCode.INSUFFICIENT_FUNDS);
+            throw new InsufficientFundsException("Insufficient funds in the account " + AccountNumberMask.mask(bankAccount.getNumber()), GlobalErrorCode.INSUFFICIENT_FUNDS);
         }
     }
 
