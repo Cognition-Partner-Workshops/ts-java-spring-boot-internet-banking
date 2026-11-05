@@ -5,7 +5,6 @@ import com.javatodev.finance.exception.GlobalErrorCode;
 import com.javatodev.finance.exception.InvalidBankingUserException;
 import com.javatodev.finance.exception.SimpleBankingGlobalException;
 import com.javatodev.finance.exception.UserAlreadyRegisteredException;
-import com.javatodev.finance.exception.SimpleBankingGlobalException;
 import com.javatodev.finance.model.dto.Status;
 import com.javatodev.finance.model.dto.User;
 import com.javatodev.finance.model.dto.UserUpdateRequest;
