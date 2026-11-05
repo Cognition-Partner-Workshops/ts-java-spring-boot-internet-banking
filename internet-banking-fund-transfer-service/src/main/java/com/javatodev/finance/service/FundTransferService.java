@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 
 import feign.FeignException;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -35,7 +34,6 @@ public class FundTransferService {
 
     private FundTransferMapper mapper = new FundTransferMapper();
 
-    @Transactional
     public FundTransferResponse fundTransfer(FundTransferRequest request) {
         JwtAuthenticationToken caller = requireCustomer();
         validateRequest(request);
@@ -56,8 +54,13 @@ public class FundTransferService {
         FundTransferResponse fundTransferResponse;
         try {
             fundTransferResponse = bankingCoreFeignClient.fundTransfer(coreRequest);
-        } catch (FeignException exception) {
-            throw accessDeniedIfUnauthorized(exception);
+        } catch (RuntimeException exception) {
+            optFundTransfer.setStatus(TransactionStatus.FAILED);
+            fundTransferRepository.save(optFundTransfer);
+            if (exception instanceof FeignException feignException) {
+                throw accessDeniedIfUnauthorized(feignException);
+            }
+            throw exception;
         }
         optFundTransfer.setTransactionReference(fundTransferResponse.getTransactionId());
         optFundTransfer.setStatus(TransactionStatus.SUCCESS);

@@ -39,6 +39,16 @@ public class KeycloakUserService {
             .roles().realmLevel().add(List.of(customerRole));
     }
 
+    public void revokeBankCustomerRole(String authId) {
+        var realm = keyCloakManager.getKeyCloakInstanceWithRealm();
+        RoleRepresentation customerRole = realm.roles().get("bank-customer").toRepresentation();
+        realm.users().get(authId).roles().realmLevel().remove(List.of(customerRole));
+    }
+
+    public void logoutUser(String authId) {
+        keyCloakManager.getKeyCloakInstanceWithRealm().users().get(authId).logout();
+    }
+
 
     public List<UserRepresentation> readUserByEmail(String email) {
         return keyCloakManager.getKeyCloakInstanceWithRealm().users().search(email);

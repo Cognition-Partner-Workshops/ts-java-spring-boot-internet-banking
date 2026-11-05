@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 
 import feign.FeignException;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -34,7 +33,6 @@ public class UtilityPaymentService {
 
     private UtilityPaymentMapper utilityPaymentMapper = new UtilityPaymentMapper();
 
-    @Transactional
     public UtilityPaymentResponse utilPayment(UtilityPaymentRequest paymentRequest) {
         JwtAuthenticationToken caller = requireCustomer();
         validateRequest(paymentRequest);
@@ -46,14 +44,19 @@ public class UtilityPaymentService {
         entity.setAccount(paymentRequest.getAccount());
         entity.setOwnerId(caller.getToken().getSubject());
         entity.setCreatedBy(caller.getToken().getSubject());
-        entity.setStatus(TransactionStatus.PROCESSING);
+        entity.setStatus(TransactionStatus.PENDING);
         UtilityPaymentEntity optUtilPayment = utilityPaymentRepository.save(entity);
 
         UtilityPaymentResponse utilityPaymentResponse;
         try {
             utilityPaymentResponse = bankingCoreRestClient.utilityPayment(paymentRequest);
-        } catch (FeignException exception) {
-            throw accessDeniedIfUnauthorized(exception);
+        } catch (RuntimeException exception) {
+            optUtilPayment.setStatus(TransactionStatus.FAILED);
+            utilityPaymentRepository.save(optUtilPayment);
+            if (exception instanceof FeignException feignException) {
+                throw accessDeniedIfUnauthorized(feignException);
+            }
+            throw exception;
         }
 
         optUtilPayment.setStatus(TransactionStatus.SUCCESS);

@@ -21,6 +21,9 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.Collections;
 import java.util.List;
@@ -106,19 +109,64 @@ public class UserService {
         return userMapper.convertToDto(userRepository.findById(userId).orElseThrow(EntityNotFoundException::new));
     }
 
+    @Transactional
     public User updateUser(Long id, UserUpdateRequest userUpdateRequest) {
         UserEntity userEntity = userRepository.findById(id).orElseThrow(EntityNotFoundException::new);
+        Status previousStatus = userEntity.getStatus();
+        Status updatedStatus = userUpdateRequest.getStatus();
+        boolean statusChanged = !Objects.equals(previousStatus, updatedStatus);
+        String authId = userEntity.getAuthId();
+        boolean hasAuthId = authId != null && !authId.isBlank();
+        boolean revokesCustomerAccess = statusChanged && hasAuthId
+            && (updatedStatus == Status.DISABLED
+                || updatedStatus == Status.BLACKLIST
+                || updatedStatus == Status.PENDING);
 
-        if (userUpdateRequest.getStatus() == Status.APPROVED) {
-            UserRepresentation userRepresentation = keycloakUserService.readUser(userEntity.getAuthId());
+        userEntity.setStatus(updatedStatus);
+        UserEntity updatedUser = userRepository.saveAndFlush(userEntity);
+
+        if (updatedStatus == Status.APPROVED && hasAuthId) {
+            registerApprovalRollbackCompensation(authId);
+            UserRepresentation userRepresentation = keycloakUserService.readUser(authId);
             userRepresentation.setEnabled(true);
             userRepresentation.setEmailVerified(true);
             keycloakUserService.updateUser(userRepresentation);
-            keycloakUserService.grantBankCustomerRole(userEntity.getAuthId());
+            keycloakUserService.grantBankCustomerRole(authId);
+        } else if (revokesCustomerAccess) {
+            UserRepresentation userRepresentation = keycloakUserService.readUser(authId);
+            userRepresentation.setEnabled(false);
+            keycloakUserService.updateUser(userRepresentation);
+            keycloakUserService.revokeBankCustomerRole(authId);
+            keycloakUserService.logoutUser(authId);
         }
 
-        userEntity.setStatus(userUpdateRequest.getStatus());
-        return userMapper.convertToDto(userRepository.save(userEntity));
+        return userMapper.convertToDto(updatedUser);
+    }
+
+    private void registerApprovalRollbackCompensation(String authId) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_ROLLED_BACK) {
+                    return;
+                }
+                try {
+                    keycloakUserService.revokeBankCustomerRole(authId);
+                } catch (RuntimeException exception) {
+                    log.warn("Unable to revoke bank-customer role after approval rollback", exception);
+                }
+                try {
+                    UserRepresentation userRepresentation = keycloakUserService.readUser(authId);
+                    userRepresentation.setEnabled(false);
+                    keycloakUserService.updateUser(userRepresentation);
+                } catch (RuntimeException exception) {
+                    log.warn("Unable to disable user after approval rollback", exception);
+                }
+            }
+        });
     }
 
     private void validatePassword(String password) {
