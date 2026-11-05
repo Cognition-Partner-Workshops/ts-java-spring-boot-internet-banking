@@ -28,7 +28,7 @@ public class UserController {
     @Operation(summary = "Register User", description = "Create a new user in the banking system")
     @PostMapping(value = "/register")
     public ResponseEntity<User> createUser(@RequestBody User request) {
-        log.info("Creating user with {}", request.toString());
+        log.info("Creating user registration request");
         return ResponseEntity.ok(userService.createUser(request));
     }
 

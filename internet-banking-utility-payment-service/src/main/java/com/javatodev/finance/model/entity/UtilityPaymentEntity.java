@@ -19,6 +19,8 @@ public class UtilityPaymentEntity extends AuditAware {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "owner_id")
+    private String ownerId;
     private Long providerId;
     private BigDecimal amount;
     private String referenceNumber;

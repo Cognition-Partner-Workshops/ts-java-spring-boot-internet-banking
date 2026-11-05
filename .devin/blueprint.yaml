@@ -65,8 +65,8 @@ knowledge:
       Auth smoke test (Keycloak password grant -> gateway):
         TOKEN=$(curl -s -X POST http://localhost:8080/realms/javatodev-internet-banking/protocol/openid-connect/token \
           -d grant_type=password -d client_id=javatodev-internet-banking-api-client \
-          -d client_secret=nVKeKJcoPbixsy2mxh9Yiy9azzGlA1V0 \
-          -d username=ib_admin@javatodev.com -d password=5V7huE3G86uB | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
+          -d client_secret="${KC_PUBLIC_API_CLIENT_SECRET:?}" \
+          -d username="${KEYCLOAK_SMOKE_USERNAME:?}" -d password="${KEYCLOAK_SMOKE_PASSWORD:?}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
         curl -H "Authorization: Bearer $TOKEN" http://localhost:8082/banking-core/api/v1/user
       Note: the postman env's client_id (internet-banking-core-client) is stale; use
       javatodev-internet-banking-api-client from the keycloak realm-export instead.

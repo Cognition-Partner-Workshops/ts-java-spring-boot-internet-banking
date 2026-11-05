@@ -4,6 +4,7 @@ import com.javatodev.finance.configuration.keycloak.KeycloakManager;
 import com.javatodev.finance.exception.EntityNotFoundException;
 
 import org.keycloak.admin.client.resource.UserResource;
+import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,29 @@ public class KeycloakUserService {
 
     public void updateUser(UserRepresentation userRepresentation) {
         keyCloakManager.getKeyCloakInstanceWithRealm().users().get(userRepresentation.getId()).update(userRepresentation);
+    }
+
+    public void grantBankCustomerRole(String authId) {
+        RoleRepresentation customerRole = keyCloakManager.getKeyCloakInstanceWithRealm()
+            .roles().get("bank-customer").toRepresentation();
+        keyCloakManager.getKeyCloakInstanceWithRealm().users().get(authId)
+            .roles().realmLevel().add(List.of(customerRole));
+    }
+
+    public boolean hasBankCustomerRole(String authId) {
+        return keyCloakManager.getKeyCloakInstanceWithRealm().users().get(authId)
+            .roles().realmLevel().listAll().stream()
+            .anyMatch(role -> "bank-customer".equals(role.getName()));
+    }
+
+    public void revokeBankCustomerRole(String authId) {
+        var realm = keyCloakManager.getKeyCloakInstanceWithRealm();
+        RoleRepresentation customerRole = realm.roles().get("bank-customer").toRepresentation();
+        realm.users().get(authId).roles().realmLevel().remove(List.of(customerRole));
+    }
+
+    public void logoutUser(String authId) {
+        keyCloakManager.getKeyCloakInstanceWithRealm().users().get(authId).logout();
     }
 
 

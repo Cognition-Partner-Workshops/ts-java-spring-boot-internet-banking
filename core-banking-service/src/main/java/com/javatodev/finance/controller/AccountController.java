@@ -26,7 +26,7 @@ public class AccountController {
     @GetMapping("/bank-account/{account_number}")
     public ResponseEntity getBankAccount(@PathVariable("account_number") String accountNumber) {
         log.info("Reading account by ID {}", accountNumber);
-        return ResponseEntity.ok(accountService.readBankAccount(accountNumber));
+        return ResponseEntity.ok(accountService.readBankAccountForCaller(accountNumber));
     }
 
     @Operation(summary = "Get Utility Account by Account Name", description = "Retrieve utility account details by account name")

@@ -20,6 +20,8 @@ services:
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: password
       KEYCLOAK_ADMIN: admin
+      KC_PUBLIC_API_CLIENT_SECRET: ${KC_PUBLIC_API_CLIENT_SECRET:?}
+      JAVA_OPTS_APPEND: -Dkeycloak.migration.replace-placeholders=true
       KEYCLOAK_ADMIN_PASSWORD: password
     command: ["start-dev", "--import-realm"]
     depends_on:
@@ -91,6 +93,9 @@ services:
     container_name: internet-banking-user-service
     ports:
       - 8083:8083
+    environment:
+      KEYCLOAK_JWK_SET_URI: http://172.25.0.11:8080/realms/javatodev-internet-banking/protocol/openid-connect/certs
+      KC_API_CLIENT_SECRET: ${KC_API_CLIENT_SECRET:?}
     entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "mysql_core_db:3306", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
     networks:
       javatodev_ib_network:
@@ -101,6 +106,8 @@ services:
     container_name: internet-banking-fund-transfer-service
     ports:
       - 8084:8084
+    environment:
+      KEYCLOAK_JWK_SET_URI: http://172.25.0.11:8080/realms/javatodev-internet-banking/protocol/openid-connect/certs
     entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "mysql_core_db:3306", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
     networks:
       javatodev_ib_network:
@@ -111,6 +118,8 @@ services:
     image: javatodev/internet-banking-utility-payment-service
     ports:
       - 8085:8085
+    environment:
+      KEYCLOAK_JWK_SET_URI: http://172.25.0.11:8080/realms/javatodev-internet-banking/protocol/openid-connect/certs
     entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "mysql_core_db:3306", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
     networks:
       javatodev_ib_network:
@@ -121,6 +130,8 @@ services:
     container_name: core-banking-service
     ports:
       - 8092:8092
+    environment:
+      KEYCLOAK_JWK_SET_URI: http://172.25.0.11:8080/realms/javatodev-internet-banking/protocol/openid-connect/certs
     entrypoint: ["./wait-for-it.sh", "internet-banking-service-registry:8081", "--timeout=50", "--", "./wait-for-it.sh", "internet-banking-config-server:8090", "--timeout=50", "--", "./wait-for-it.sh", "mysql_core_db:3306", "--timeout=50", "--","java", "-jar", "-Dspring.profiles.active=docker", "/app.jar"]
     networks:
       javatodev_ib_network:

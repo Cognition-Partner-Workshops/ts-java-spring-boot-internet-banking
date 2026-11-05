@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
 
@@ -32,7 +33,7 @@ public class UtilityPaymentController {
 
     @Operation(summary = "Process Utility Payment", description = "Process a utility payment request")
     @PostMapping
-    public ResponseEntity processPayment(@RequestBody UtilityPaymentRequest paymentRequest) {
+    public ResponseEntity processPayment(@Valid @RequestBody UtilityPaymentRequest paymentRequest) {
         return ResponseEntity.ok(utilityPaymentService.utilPayment(paymentRequest));
     }
 

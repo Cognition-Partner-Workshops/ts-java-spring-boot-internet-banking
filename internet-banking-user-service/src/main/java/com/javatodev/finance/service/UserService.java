@@ -1,6 +1,10 @@
 package com.javatodev.finance.service;
 
-import com.javatodev.finance.exception.*;
+import com.javatodev.finance.exception.EntityNotFoundException;
+import com.javatodev.finance.exception.GlobalErrorCode;
+import com.javatodev.finance.exception.InvalidBankingUserException;
+import com.javatodev.finance.exception.SimpleBankingGlobalException;
+import com.javatodev.finance.exception.UserAlreadyRegisteredException;
 import com.javatodev.finance.model.dto.Status;
 import com.javatodev.finance.model.dto.User;
 import com.javatodev.finance.model.dto.UserUpdateRequest;
@@ -16,9 +20,13 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -31,6 +39,7 @@ public class UserService {
     private UserMapper userMapper = new UserMapper();
 
     public User createUser(User user) {
+        validatePassword(user.getPassword());
 
         List<UserRepresentation> userRepresentations = keycloakUserService.readUserByEmail(user.getEmail());
         if (!userRepresentations.isEmpty()) {
@@ -39,41 +48,47 @@ public class UserService {
 
         UserResponse userResponse = bankingCoreRestClient.readUser(user.getIdentification());
 
-        if (userResponse.getId() != null) {
-
-            if (!userResponse.getEmail().equals(user.getEmail())) {
-                throw new InvalidEmailException("Incorrect email. Please check and retry.", GlobalErrorCode.ERROR_INVALID_EMAIL);
-            }
-
-            UserRepresentation userRepresentation = new UserRepresentation();
-            userRepresentation.setEmail(userResponse.getEmail());
-            userRepresentation.setEmailVerified(false);
-            userRepresentation.setEnabled(false);
-            userRepresentation.setUsername(userResponse.getEmail());
-            userRepresentation.setFirstName(userResponse.getFirstName());
-            userRepresentation.setLastName(userResponse.getLastName());
-
-            CredentialRepresentation credentialRepresentation = new CredentialRepresentation();
-            credentialRepresentation.setValue(user.getPassword());
-            credentialRepresentation.setTemporary(false);
-            userRepresentation.setCredentials(Collections.singletonList(credentialRepresentation));
-
-            Integer userCreationResponse = keycloakUserService.createUser(userRepresentation);
-
-            if (userCreationResponse == 201) {
-                log.info("User created under given username {}", user.getEmail());
-
-                List<UserRepresentation> userRepresentations1 = keycloakUserService.readUserByEmail(user.getEmail());
-                user.setAuthId(userRepresentations1.get(0).getId());
-                user.setStatus(Status.PENDING);
-                user.setIdentification(userResponse.getIdentificationNumber());
-                UserEntity save = userRepository.save(userMapper.convertToEntity(user));
-                return userMapper.convertToDto(save);
-            }
-
+        if (userResponse == null || userResponse.getId() == null
+            || !Objects.equals(userResponse.getEmail(), user.getEmail())) {
+            throw new SimpleBankingGlobalException(
+                GlobalErrorCode.ERROR_USER_NOT_FOUND_UNDER_NIC,
+                "We couldn't find user under given identification. Please check and retry");
         }
 
-        throw new InvalidBankingUserException("We couldn't find user under given identification. Please check and retry", GlobalErrorCode.ERROR_USER_NOT_FOUND_UNDER_NIC);
+        UserRepresentation userRepresentation = new UserRepresentation();
+        userRepresentation.setEmail(userResponse.getEmail());
+        userRepresentation.setEmailVerified(false);
+        userRepresentation.setEnabled(false);
+        userRepresentation.setUsername(userResponse.getEmail());
+        userRepresentation.setFirstName(userResponse.getFirstName());
+        userRepresentation.setLastName(userResponse.getLastName());
+
+        CredentialRepresentation credentialRepresentation = new CredentialRepresentation();
+        credentialRepresentation.setValue(user.getPassword());
+        credentialRepresentation.setTemporary(false);
+        userRepresentation.setCredentials(Collections.singletonList(credentialRepresentation));
+
+        Integer userCreationResponse = keycloakUserService.createUser(userRepresentation);
+
+        if (userCreationResponse == 201) {
+            log.info("User created under given username {}", user.getEmail());
+
+            List<UserRepresentation> userRepresentations1 = keycloakUserService.readUserByEmail(user.getEmail());
+            user.setAuthId(userRepresentations1.get(0).getId());
+            user.setStatus(Status.PENDING);
+            UserEntity save = userRepository.save(userMapper.convertToEntity(user));
+            User response = userMapper.convertToDto(save);
+            response.setAuthId(null);
+            response.setEmail(user.getEmail());
+            response.setIdentification(user.getIdentification());
+            response.setPassword(null);
+            response.setStatus(Status.PENDING);
+            return response;
+        }
+
+        throw new SimpleBankingGlobalException(
+            GlobalErrorCode.ERROR_USER_NOT_FOUND_UNDER_NIC,
+            "We couldn't find user under given identification. Please check and retry");
 
     }
 
@@ -93,19 +108,80 @@ public class UserService {
         return userMapper.convertToDto(userRepository.findById(userId).orElseThrow(EntityNotFoundException::new));
     }
 
+    @Transactional
     public User updateUser(Long id, UserUpdateRequest userUpdateRequest) {
         UserEntity userEntity = userRepository.findById(id).orElseThrow(EntityNotFoundException::new);
+        Status previousStatus = userEntity.getStatus();
+        Status updatedStatus = userUpdateRequest.getStatus();
+        boolean statusChanged = !Objects.equals(previousStatus, updatedStatus);
+        String authId = userEntity.getAuthId();
+        boolean hasAuthId = authId != null && !authId.isBlank();
+        boolean revokesCustomerAccess = statusChanged && hasAuthId
+            && (updatedStatus == Status.DISABLED
+                || updatedStatus == Status.BLACKLIST
+                || updatedStatus == Status.PENDING);
 
-        if (userUpdateRequest.getStatus() == Status.APPROVED) {
-            UserRepresentation userRepresentation = keycloakUserService.readUser(userEntity.getAuthId());
+        userEntity.setStatus(updatedStatus);
+        UserEntity updatedUser = userRepository.saveAndFlush(userEntity);
+
+        if (updatedStatus == Status.APPROVED && hasAuthId) {
+            UserRepresentation userRepresentation = keycloakUserService.readUser(authId);
+            boolean wasEnabled = Boolean.TRUE.equals(userRepresentation.isEnabled());
+            boolean wasEmailVerified = Boolean.TRUE.equals(userRepresentation.isEmailVerified());
+            boolean hadCustomerRole = keycloakUserService.hasBankCustomerRole(authId);
+            registerApprovalRollbackCompensation(authId, wasEnabled, wasEmailVerified, hadCustomerRole);
             userRepresentation.setEnabled(true);
             userRepresentation.setEmailVerified(true);
             keycloakUserService.updateUser(userRepresentation);
+            keycloakUserService.grantBankCustomerRole(authId);
+        } else if (revokesCustomerAccess) {
+            UserRepresentation userRepresentation = keycloakUserService.readUser(authId);
+            userRepresentation.setEnabled(false);
+            keycloakUserService.updateUser(userRepresentation);
+            keycloakUserService.revokeBankCustomerRole(authId);
+            keycloakUserService.logoutUser(authId);
         }
 
-        userEntity.setStatus(userUpdateRequest.getStatus());
-        return userMapper.convertToDto(userRepository.save(userEntity));
+        return userMapper.convertToDto(updatedUser);
     }
 
+    private void registerApprovalRollbackCompensation(String authId, boolean wasEnabled,
+        boolean wasEmailVerified, boolean hadCustomerRole) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_ROLLED_BACK) {
+                    return;
+                }
+                if (!hadCustomerRole) {
+                    try {
+                        keycloakUserService.revokeBankCustomerRole(authId);
+                    } catch (RuntimeException exception) {
+                        log.warn("Unable to revoke bank-customer role after approval rollback", exception);
+                    }
+                }
+                try {
+                    UserRepresentation userRepresentation = keycloakUserService.readUser(authId);
+                    userRepresentation.setEnabled(wasEnabled);
+                    userRepresentation.setEmailVerified(wasEmailVerified);
+                    keycloakUserService.updateUser(userRepresentation);
+                } catch (RuntimeException exception) {
+                    log.warn("Unable to restore user after approval rollback", exception);
+                }
+            }
+        });
+    }
+
+    private void validatePassword(String password) {
+        if (password == null || password.length() < 12
+            || password.chars().noneMatch(Character::isUpperCase)
+            || password.chars().noneMatch(Character::isLowerCase)
+            || password.chars().noneMatch(Character::isDigit)) {
+            throw new IllegalArgumentException("Password does not meet the required policy");
+        }
+    }
 
 }

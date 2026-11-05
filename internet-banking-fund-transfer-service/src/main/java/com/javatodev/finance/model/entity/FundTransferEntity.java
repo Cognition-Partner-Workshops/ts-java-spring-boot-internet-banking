@@ -20,6 +20,8 @@ public class FundTransferEntity extends AuditAware {
     private Long id;
 
     private String transactionReference;
+    @Column(name = "owner_id")
+    private String ownerId;
     private String fromAccount;
     private String toAccount;
     private BigDecimal amount;
