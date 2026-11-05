@@ -1,0 +1,40 @@
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directories:
+      - /core-banking-service
+      - /internet-banking-api-gateway
+      - /internet-banking-config-server
+      - /internet-banking-fund-transfer-service
+      - /internet-banking-service-registry
+      - /internet-banking-user-service
+      - /internet-banking-utility-payment-service
+    schedule:
+      interval: weekly
+    groups:
+      gradle-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directories:
+      - /core-banking-service
+      - /internet-banking-api-gateway
+      - /internet-banking-config-server
+      - /internet-banking-fund-transfer-service
+      - /internet-banking-service-registry
+      - /internet-banking-user-service
+      - /internet-banking-utility-payment-service
+      - /docker-compose/keycloak
+      - /docker-compose/mysql
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker-compose
+    directory: /docker-compose
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
