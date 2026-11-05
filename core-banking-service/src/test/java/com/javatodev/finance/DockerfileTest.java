@@ -7,11 +7,32 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DockerfileTest {
+
+    @Test
+    void mysqlDockerfileDoesNotBakeSecretsIntoImage() throws IOException {
+        for (String line : Files.readAllLines(Path.of("../docker-compose/mysql/Dockerfile"))) {
+            String[] instruction = line.trim().split("\\s+", 2);
+            if (instruction.length < 2 || !instruction[0].matches("(?i)ENV|ARG")) {
+                continue;
+            }
+            String arguments = instruction[1];
+            List<String> keys = List.of(arguments.split("[\\s=]", 2)[0]);
+            if (arguments.startsWith(keys.get(0) + "=")) {
+                keys = Pattern.compile("(?:^|\\s)([A-Za-z_][A-Za-z0-9_]*)=")
+                        .matcher(arguments).results().map(match -> match.group(1)).toList();
+            }
+            for (String key : keys) {
+                assertFalse(key.matches("(?i).*(PASSWORD|SECRET|TOKEN).*"),
+                        "MySQL Dockerfile must not declare secret ENV or ARG keys");
+            }
+        }
+    }
 
     @Test
     void finalStageRunsAsNonRootUser() throws IOException {
