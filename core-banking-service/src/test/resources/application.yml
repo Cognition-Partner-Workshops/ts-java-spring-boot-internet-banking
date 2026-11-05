@@ -1,4 +1,9 @@
 spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:8080/realms/javatodev-internet-banking/protocol/openid-connect/certs
   application:
     name: core-banking-service
   datasource:
