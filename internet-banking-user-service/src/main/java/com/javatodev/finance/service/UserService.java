@@ -125,10 +125,11 @@ public class UserService {
         UserEntity updatedUser = userRepository.saveAndFlush(userEntity);
 
         if (updatedStatus == Status.APPROVED && hasAuthId) {
-            if (previousStatus != Status.APPROVED) {
-                registerApprovalRollbackCompensation(authId);
-            }
             UserRepresentation userRepresentation = keycloakUserService.readUser(authId);
+            boolean wasEnabled = Boolean.TRUE.equals(userRepresentation.isEnabled());
+            boolean wasEmailVerified = Boolean.TRUE.equals(userRepresentation.isEmailVerified());
+            boolean hadCustomerRole = keycloakUserService.hasBankCustomerRole(authId);
+            registerApprovalRollbackCompensation(authId, wasEnabled, wasEmailVerified, hadCustomerRole);
             userRepresentation.setEnabled(true);
             userRepresentation.setEmailVerified(true);
             keycloakUserService.updateUser(userRepresentation);
@@ -144,7 +145,8 @@ public class UserService {
         return userMapper.convertToDto(updatedUser);
     }
 
-    private void registerApprovalRollbackCompensation(String authId) {
+    private void registerApprovalRollbackCompensation(String authId, boolean wasEnabled,
+        boolean wasEmailVerified, boolean hadCustomerRole) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             return;
         }
@@ -154,17 +156,20 @@ public class UserService {
                 if (status != STATUS_ROLLED_BACK) {
                     return;
                 }
-                try {
-                    keycloakUserService.revokeBankCustomerRole(authId);
-                } catch (RuntimeException exception) {
-                    log.warn("Unable to revoke bank-customer role after approval rollback", exception);
+                if (!hadCustomerRole) {
+                    try {
+                        keycloakUserService.revokeBankCustomerRole(authId);
+                    } catch (RuntimeException exception) {
+                        log.warn("Unable to revoke bank-customer role after approval rollback", exception);
+                    }
                 }
                 try {
                     UserRepresentation userRepresentation = keycloakUserService.readUser(authId);
-                    userRepresentation.setEnabled(false);
+                    userRepresentation.setEnabled(wasEnabled);
+                    userRepresentation.setEmailVerified(wasEmailVerified);
                     keycloakUserService.updateUser(userRepresentation);
                 } catch (RuntimeException exception) {
-                    log.warn("Unable to disable user after approval rollback", exception);
+                    log.warn("Unable to restore user after approval rollback", exception);
                 }
             }
         });

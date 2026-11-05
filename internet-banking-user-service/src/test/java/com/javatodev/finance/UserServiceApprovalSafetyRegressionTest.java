@@ -144,6 +144,7 @@ class UserServiceApprovalSafetyRegressionTest {
         when(repository.findById(USER_ID)).thenReturn(Optional.of(entity));
         when(repository.saveAndFlush(any(UserEntity.class))).thenAnswer(call -> call.getArgument(0));
         when(keycloakUsers.readUser(AUTH_ID)).thenReturn(userRepresentation(true));
+        when(keycloakUsers.hasBankCustomerRole(AUTH_ID)).thenReturn(true);
         doThrow(grantFailure).when(keycloakUsers).grantBankCustomerRole(AUTH_ID);
         UserService service = new UserService(keycloakUsers, repository, core);
 
@@ -162,6 +163,68 @@ class UserServiceApprovalSafetyRegressionTest {
     }
 
     @Test
+    void failedReapprovalOfKeycloakDisabledCustomerStaysDisabled() {
+        KeycloakUserService keycloakUsers = mock(KeycloakUserService.class);
+        UserRepository repository = mock(UserRepository.class);
+        BankingCoreRestClient core = mock(BankingCoreRestClient.class);
+        UserEntity entity = approvedUser();
+        RuntimeException grantFailure = new IllegalStateException("Keycloak grant failed");
+        when(repository.findById(USER_ID)).thenReturn(Optional.of(entity));
+        when(repository.saveAndFlush(any(UserEntity.class))).thenAnswer(call -> call.getArgument(0));
+        when(keycloakUsers.readUser(AUTH_ID)).thenReturn(userRepresentation(false));
+        when(keycloakUsers.hasBankCustomerRole(AUTH_ID)).thenReturn(true);
+        doThrow(grantFailure).when(keycloakUsers).grantBankCustomerRole(AUTH_ID);
+        List<Boolean> enabledStates = new ArrayList<>();
+        doAnswer(call -> {
+            enabledStates.add(((UserRepresentation) call.getArgument(0)).isEnabled());
+            return null;
+        }).when(keycloakUsers).updateUser(any(UserRepresentation.class));
+        UserService service = new UserService(keycloakUsers, repository, core);
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            assertSame(grantFailure, assertThrows(RuntimeException.class,
+                () -> service.updateUser(USER_ID, update(Status.APPROVED))));
+            TransactionSynchronizationManager.getSynchronizations().forEach(
+                synchronization -> synchronization.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+
+            assertFalse(enabledStates.isEmpty(), "expected an enable update before the grant failure");
+            assertEquals(Boolean.FALSE, enabledStates.get(enabledStates.size() - 1),
+                "expected rollback to restore the disabled state; observed " + enabledStates);
+            verify(keycloakUsers, never()).revokeBankCustomerRole(AUTH_ID);
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void successfulApprovalCommitDoesNotRunCompensation() {
+        KeycloakUserService keycloakUsers = mock(KeycloakUserService.class);
+        UserRepository repository = mock(UserRepository.class);
+        BankingCoreRestClient core = mock(BankingCoreRestClient.class);
+        UserEntity entity = approvedUser();
+        entity.setStatus(Status.PENDING);
+        when(repository.findById(USER_ID)).thenReturn(Optional.of(entity));
+        when(repository.saveAndFlush(any(UserEntity.class))).thenAnswer(call -> call.getArgument(0));
+        when(keycloakUsers.readUser(AUTH_ID)).thenReturn(userRepresentation(false));
+        when(keycloakUsers.hasBankCustomerRole(AUTH_ID)).thenReturn(false);
+        UserService service = new UserService(keycloakUsers, repository, core);
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            service.updateUser(USER_ID, update(Status.APPROVED));
+            TransactionSynchronizationManager.getSynchronizations().forEach(
+                synchronization -> synchronization.afterCompletion(TransactionSynchronization.STATUS_COMMITTED));
+
+            verify(keycloakUsers, never()).revokeBankCustomerRole(AUTH_ID);
+            verify(keycloakUsers, never()).updateUser(argThat(updated -> Boolean.FALSE.equals(updated.isEnabled())));
+            verify(keycloakUsers).grantBankCustomerRole(AUTH_ID);
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
     void pendingApprovalRollbackStillCompensatesKeycloak() {
         KeycloakUserService keycloakUsers = mock(KeycloakUserService.class);
         UserRepository repository = mock(UserRepository.class);
@@ -172,6 +235,7 @@ class UserServiceApprovalSafetyRegressionTest {
         when(repository.findById(USER_ID)).thenReturn(Optional.of(entity));
         when(repository.saveAndFlush(any(UserEntity.class))).thenAnswer(call -> call.getArgument(0));
         when(keycloakUsers.readUser(AUTH_ID)).thenReturn(userRepresentation(false));
+        when(keycloakUsers.hasBankCustomerRole(AUTH_ID)).thenReturn(false);
         List<Boolean> enabledStates = new ArrayList<>();
         doAnswer(call -> {
             enabledStates.add(((UserRepresentation) call.getArgument(0)).isEnabled());

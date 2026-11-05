@@ -39,6 +39,12 @@ public class KeycloakUserService {
             .roles().realmLevel().add(List.of(customerRole));
     }
 
+    public boolean hasBankCustomerRole(String authId) {
+        return keyCloakManager.getKeyCloakInstanceWithRealm().users().get(authId)
+            .roles().realmLevel().listAll().stream()
+            .anyMatch(role -> "bank-customer".equals(role.getName()));
+    }
+
     public void revokeBankCustomerRole(String authId) {
         var realm = keyCloakManager.getKeyCloakInstanceWithRealm();
         RoleRepresentation customerRole = realm.roles().get("bank-customer").toRepresentation();
