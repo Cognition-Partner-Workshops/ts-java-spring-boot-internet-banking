@@ -19,7 +19,7 @@ public class KeycloakProperties {
     @Value("${app.config.keycloak.clientId}")
     private String clientId;
 
-    @Value("${app.config.keycloak.client-secret}")
+    @Value("${KC_API_CLIENT_SECRET:${app.config.keycloak.client-secret}}")
     private String clientSecret;
 
     private static Keycloak keycloakInstance = null;

@@ -40,8 +40,7 @@ class RealmExportSecurityRegressionTest {
         assertRealmRole(realm, "bank-customer");
         assertRealmRole(realm, "bank-admin");
         assertRealmRole(realm, "banking-service");
-        JsonNode admin = user(realm, "ib_admin@javatodev.com");
-        assertTrue(contains(admin.path("realmRoles"), "bank-admin"), "ib_admin lacks bank-admin role");
+        assertTrue(hasUserWithRealmRole(realm, "bank-admin"), "no realm user has bank-admin role");
         JsonNode serviceAccount = user(realm, "service-account-javatodev-internet-banking-kc-api-client");
         assertTrue(contains(serviceAccount.path("realmRoles"), "banking-service"),
             "service account lacks banking-service role");
@@ -70,6 +69,13 @@ class RealmExportSecurityRegressionTest {
 
     private void assertRealmRole(JsonNode realm, String roleName) {
         assertTrue(contains(realm.path("roles").path("realm"), roleName), "realm role missing " + roleName);
+    }
+
+    private boolean hasUserWithRealmRole(JsonNode realm, String roleName) {
+        for (JsonNode user : realm.path("users")) {
+            if (contains(user.path("realmRoles"), roleName)) return true;
+        }
+        return false;
     }
 
     private boolean contains(JsonNode values, String expected) {

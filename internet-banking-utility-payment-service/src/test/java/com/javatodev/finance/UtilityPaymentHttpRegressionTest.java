@@ -99,7 +99,7 @@ class UtilityPaymentHttpRegressionTest {
             "owner payment observed HTTP " + result.getResponse().getStatus());
         verify(core).utilityPayment(any());
         verify(repository, times(2)).save(any(UtilityPaymentEntity.class));
-        verify(repository).save(argThat(entity -> "jwt-subject".equals(ownerId(entity))));
+        verify(repository, times(2)).save(argThat(entity -> "jwt-subject".equals(ownerId(entity))));
     }
 
     private MvcResult post(String body) throws Exception {

@@ -1,17 +1,18 @@
 package com.javatodev.finance.configuration.audit;
 
-import com.javatodev.finance.configuration.filter.ApiRequestContextHolder;
-
-import org.apache.commons.lang.StringUtils;
 import org.springframework.data.domain.AuditorAware;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 import java.util.Optional;
 
 public class AuditorAwareConfig implements AuditorAware<String> {
     @Override public Optional<String> getCurrentAuditor() {
-        if (StringUtils.isEmpty(ApiRequestContextHolder.getContext().getAuthId())) {
-            return Optional.of("SYSTEM_USER");
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication instanceof JwtAuthenticationToken jwt) {
+            return Optional.ofNullable(jwt.getToken().getSubject());
         }
-        return Optional.of(ApiRequestContextHolder.getContext().getAuthId());
+        return Optional.empty();
     }
 }

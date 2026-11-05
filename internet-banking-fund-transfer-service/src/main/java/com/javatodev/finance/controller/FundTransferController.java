@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,8 +28,8 @@ public class FundTransferController {
 
     @Operation(summary = "Send Fund Transfer", description = "Process a fund transfer request")
     @PostMapping
-    public ResponseEntity sendFundTransfer(@RequestBody FundTransferRequest fundTransferRequest) {
-        log.info("Got fund transfer request from API {}", fundTransferRequest.toString());
+    public ResponseEntity sendFundTransfer(@Valid @RequestBody FundTransferRequest fundTransferRequest) {
+        log.info("Got fund transfer request from API");
         return ResponseEntity.ok(fundTransferService.fundTransfer(fundTransferRequest));
     }
 

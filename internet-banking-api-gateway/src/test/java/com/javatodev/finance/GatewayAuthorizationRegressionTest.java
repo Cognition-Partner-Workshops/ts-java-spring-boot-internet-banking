@@ -41,8 +41,7 @@ class GatewayAuthorizationRegressionTest {
     void customerCannotAccessAdminRoutes(String path) {
         int status = client.get().uri(path)
             .header("Authorization", "Bearer customer").exchange().returnResult(String.class).getStatus().value();
-        assertTrue(status == 401 || status == 403,
-            "customer " + path + " expected HTTP 401/403 but observed " + status);
+        assertEquals(403, status, "customer " + path + " expected HTTP 403 but observed " + status);
     }
 
     @Test

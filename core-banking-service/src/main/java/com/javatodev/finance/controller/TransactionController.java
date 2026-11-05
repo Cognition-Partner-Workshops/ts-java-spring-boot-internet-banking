@@ -12,10 +12,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Tag(name = "Transaction Controller", description = "APIs for managing transactions")
 @RestController
 @RequiredArgsConstructor
@@ -26,20 +25,14 @@ public class TransactionController {
 
     @Operation(summary = "Fund Transfer", description = "Process a fund transfer request")
     @PostMapping("/fund-transfer")
-    public ResponseEntity fundTransfer(@RequestBody FundTransferRequest fundTransferRequest) {
-
-        log.info("Fund transfer initiated in core bank from {}", fundTransferRequest.toString());
+    public ResponseEntity fundTransfer(@Valid @RequestBody FundTransferRequest fundTransferRequest) {
         return ResponseEntity.ok(transactionService.fundTransfer(fundTransferRequest));
-
     }
 
     @Operation(summary = "Utility Payment", description = "Process a utility payment request")
     @PostMapping("/util-payment")
-    public ResponseEntity utilPayment(@RequestBody UtilityPaymentRequest utilityPaymentRequest) {
-
-        log.info("Utility Payment initiated in core bank from {}", utilityPaymentRequest.toString());
+    public ResponseEntity utilPayment(@Valid @RequestBody UtilityPaymentRequest utilityPaymentRequest) {
         return ResponseEntity.ok(transactionService.utilPayment(utilityPaymentRequest));
-
     }
 
 }

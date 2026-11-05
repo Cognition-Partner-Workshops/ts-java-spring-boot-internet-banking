@@ -101,7 +101,7 @@ class FundTransferHttpRegressionTest {
         assertEquals(200, result.getResponse().getStatus(), "owner transfer observed HTTP " + result.getResponse().getStatus());
         verify(core).fundTransfer(any());
         verify(repository, times(2)).save(any(FundTransferEntity.class));
-        verify(repository).save(argThat(entity -> "jwt-subject".equals(ownerId(entity))));
+        verify(repository, times(2)).save(argThat(entity -> "jwt-subject".equals(ownerId(entity))));
     }
 
     private MvcResult post(String path, String body) throws Exception {

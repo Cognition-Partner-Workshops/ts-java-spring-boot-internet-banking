@@ -35,14 +35,14 @@
   "duplicateEmailsAllowed": false,
   "resetPasswordAllowed": false,
   "editUsernameAllowed": false,
-  "bruteForceProtected": false,
+  "bruteForceProtected": true,
   "permanentLockout": false,
   "maxFailureWaitSeconds": 900,
   "minimumQuickLoginWaitSeconds": 60,
   "waitIncrementSeconds": 60,
   "quickLoginCheckMilliSeconds": 1000,
   "maxDeltaTimeSeconds": 43200,
-  "failureFactor": 30,
+  "failureFactor": 5,
   "roles": {
     "realm": [
       {
@@ -79,6 +79,33 @@
         "id": "1564f1a7-a99a-469e-9b2b-d99689c69c88",
         "name": "uma_authorization",
         "description": "${role_uma_authorization}",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "4f3cf5dd-5fed-40a3-90d4-b790bbf86d28",
+        "attributes": {}
+      },
+      {
+        "id": "42ba2ea3-eda8-4a55-93b8-6a19b0fbfb99",
+        "name": "bank-customer",
+        "description": "",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "4f3cf5dd-5fed-40a3-90d4-b790bbf86d28",
+        "attributes": {}
+      },
+      {
+        "id": "5775456d-32b8-4484-854c-91f5a899a048",
+        "name": "bank-admin",
+        "description": "",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "4f3cf5dd-5fed-40a3-90d4-b790bbf86d28",
+        "attributes": {}
+      },
+      {
+        "id": "f10528c9-635a-4eb4-89e8-1cb02b7d9497",
+        "name": "banking-service",
+        "description": "",
         "composite": false,
         "clientRole": false,
         "containerId": "4f3cf5dd-5fed-40a3-90d4-b790bbf86d28",
@@ -487,19 +514,16 @@
       "disableableCredentialTypes": [],
       "requiredActions": [],
       "notBefore": 0,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "5V7huE3G86uB"
-        }
-      ],
       "access": {
-          "manageGroupMembership": true,
-          "view": true,
-          "mapRoles": true,
-          "impersonate": false,
-          "manage": true
-      }
+        "manageGroupMembership": true,
+        "view": true,
+        "mapRoles": true,
+        "impersonate": false,
+        "manage": true
+      },
+      "realmRoles": [
+        "bank-admin"
+      ]
     },
     {
       "id": "a3c44ecb-cb94-4a3f-9014-f40bd4ff5fce",
@@ -533,13 +557,15 @@
       "disableableCredentialTypes": [],
       "requiredActions": [],
       "realmRoles": [
+        "banking-service",
         "default-roles-javatodev-internet-banking"
       ],
       "clientRoles": {
         "realm-management": [
+          "manage-users",
           "query-users",
-          "view-users",
-          "manage-users"
+          "view-realm",
+          "view-users"
         ],
         "javatodev-internet-banking-kc-api-client": [
           "uma_protection"
@@ -683,7 +709,7 @@
       "consentRequired": false,
       "standardFlowEnabled": false,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
+      "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "publicClient": true,
       "frontchannelLogout": false,
@@ -756,7 +782,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "nVKeKJcoPbixsy2mxh9Yiy9azzGlA1V0",
+      "secret": "${KC_PUBLIC_API_CLIENT_SECRET}",
       "redirectUris": [
         "/*"
       ],
@@ -858,7 +884,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "koS4tPpw5xPqMX2cczBOmkWJIon7Ju3D",
+      "secret": "${KC_API_CLIENT_SECRET}",
       "redirectUris": [
         "/*"
       ],
@@ -870,7 +896,7 @@
       "consentRequired": false,
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
+      "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true,
       "publicClient": false,
       "frontchannelLogout": true,
@@ -2717,5 +2743,6 @@
   },
   "clientPolicies": {
     "policies": []
-  }
+  },
+  "passwordPolicy": "length(12) and upperCase(1) and lowerCase(1) and digits(1) and notUsername and notEmail and passwordHistory(3)"
 }

@@ -33,7 +33,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
@@ -223,9 +222,7 @@ class UserAuthorizationRegressionTest {
         Object provider = Proxy.newProxyInstance(providerType.getClassLoader(), new Class<?>[]{providerType},
             (proxy, method, args) -> method.getReturnType() == String.class ? "stub-service-token" : null);
         try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
-            RootBeanDefinition definition = new RootBeanDefinition(providerType);
-            definition.setInstanceSupplier(() -> provider);
-            context.registerBeanDefinition("serviceTokenProvider", definition);
+            context.getBeanFactory().registerSingleton("serviceTokenProvider", provider);
             context.register(CustomFeignClientConfiguration.class);
             context.refresh();
             RequestTemplate template = new RequestTemplate();

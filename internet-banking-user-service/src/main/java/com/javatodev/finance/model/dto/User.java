@@ -1,5 +1,7 @@
 package com.javatodev.finance.model.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -14,6 +16,7 @@ public class User extends AuditAware {
 
     private String password;
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private String authId;
 
     private Status status;
