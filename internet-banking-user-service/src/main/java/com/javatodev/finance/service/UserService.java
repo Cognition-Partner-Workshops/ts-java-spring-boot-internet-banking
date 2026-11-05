@@ -66,10 +66,12 @@ public class UserService {
                 log.info("User created under given username {}", user.getEmail());
 
                 List<UserRepresentation> userRepresentations1 = keycloakUserService.readUserByEmail(user.getEmail());
-                user.setAuthId(userRepresentations1.get(0).getId());
-                user.setStatus(Status.PENDING);
-                user.setIdentification(userResponse.getIdentificationNumber());
-                UserEntity save = userRepository.save(userMapper.convertToEntity(user));
+                // Build a new record from server-side values only; client id/version/authId/status are ignored.
+                UserEntity registration = new UserEntity();
+                registration.setAuthId(userRepresentations1.get(0).getId());
+                registration.setStatus(Status.PENDING);
+                registration.setIdentification(userResponse.getIdentificationNumber());
+                UserEntity save = userRepository.save(registration);
                 return userMapper.convertToDto(save);
             }
 

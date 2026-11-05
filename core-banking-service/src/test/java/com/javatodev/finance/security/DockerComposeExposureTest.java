@@ -37,4 +37,15 @@ class DockerComposeExposureTest {
             }
         }
     }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void serviceRegistryIsNotPublishedOnTheHost() throws Exception {
+        try (InputStream in = Files.newInputStream(Path.of("..", "docker-compose", "docker-compose.yml"))) {
+            Map<String, Object> services = (Map<String, Object>) ((Map<String, Object>) new Yaml().load(in)).get("services");
+            Map<String, Object> registry = (Map<String, Object>) services.get("internet-banking-service-registry");
+            assertNotNull(registry, "internet-banking-service-registry is missing from docker-compose.yml");
+            assertFalse(registry.containsKey("ports"), "unauthenticated Eureka registry publishes host ports " + registry.get("ports"));
+        }
+    }
 }

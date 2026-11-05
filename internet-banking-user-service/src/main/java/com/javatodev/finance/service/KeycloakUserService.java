@@ -33,7 +33,10 @@ public class KeycloakUserService {
 
 
     public List<UserRepresentation> readUserByEmail(String email) {
-        return keyCloakManager.getKeyCloakInstanceWithRealm().users().search(email);
+        // Exact, case-insensitive email match: users().search(String) is a prefix search over several fields.
+        return keyCloakManager.getKeyCloakInstanceWithRealm().users().searchByEmail(email, true).stream()
+            .filter(user -> user.getEmail() != null && user.getEmail().equalsIgnoreCase(email))
+            .toList();
     }
 
 

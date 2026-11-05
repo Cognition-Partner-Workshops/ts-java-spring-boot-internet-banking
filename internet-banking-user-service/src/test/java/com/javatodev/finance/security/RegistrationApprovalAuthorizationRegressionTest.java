@@ -1,6 +1,8 @@
 package com.javatodev.finance.security;
 
+import com.javatodev.finance.model.rest.response.UserResponse;
 import com.javatodev.finance.service.KeycloakUserService;
+import com.javatodev.finance.service.rest.BankingCoreRestClient;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,6 +52,9 @@ class RegistrationApprovalAuthorizationRegressionTest {
     @MockBean
     private KeycloakUserService keycloakUserService;
 
+    @MockBean
+    private BankingCoreRestClient bankingCoreRestClient;
+
     @DynamicPropertySource
     static void jwt(DynamicPropertyRegistry registry) {
         registry.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", TestJwt::jwkSetUri);
@@ -58,6 +63,7 @@ class RegistrationApprovalAuthorizationRegressionTest {
     @BeforeEach
     void seed() {
         jdbcTemplate.update("DELETE FROM user");
+        jdbcTemplate.update("ALTER TABLE user ALTER COLUMN id RESTART WITH 1000");
         jdbcTemplate.update("INSERT INTO user (id, auth_id, identification, status, created_date, created_by, modified_date, modified_by, version) VALUES (1, 'kc-pending-user', 'ID-PENDING', 'PENDING', CURRENT_TIMESTAMP, 'test', CURRENT_TIMESTAMP, 'test', 0)");
         when(keycloakUserService.readUser(anyString())).thenReturn(new UserRepresentation());
         when(keycloakUserService.readUserByEmail(anyString())).thenReturn(List.of());
@@ -99,6 +105,30 @@ class RegistrationApprovalAuthorizationRegressionTest {
             .andReturn().getResponse().getStatus();
         assertNotEquals(401, status);
         assertNotEquals(403, status);
+    }
+
+    /** sfind-66aba107: the public register route must not let the body pick which record is written. */
+    @Test
+    void registrationCannotOverwriteAnotherCustomersRecord() throws Exception {
+        UserRepresentation created = new UserRepresentation();
+        created.setId("kc-attacker-login");
+        created.setEmail("new@example.com");
+        when(keycloakUserService.readUserByEmail("new@example.com")).thenReturn(List.of(), List.of(created));
+        when(keycloakUserService.createUser(any())).thenReturn(201);
+        UserResponse coreUser = new UserResponse();
+        coreUser.setId(5);
+        coreUser.setEmail("new@example.com");
+        coreUser.setIdentificationNumber("ID-NEW");
+        when(bankingCoreRestClient.readUser("ID-NEW")).thenReturn(coreUser);
+
+        mockMvc.perform(post("/api/v1/bank-users/register").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id\":1,\"version\":0,\"email\":\"new@example.com\",\"identification\":\"ID-NEW\",\"password\":\"x\",\"status\":\"APPROVED\"}"))
+            .andExpect(status().isOk());
+
+        assertEquals("kc-pending-user", jdbcTemplate.queryForObject("SELECT auth_id FROM user WHERE id = 1", String.class),
+            "existing registration was relinked to another login");
+        assertEquals(2, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM user", Integer.class));
+        assertEquals("PENDING", jdbcTemplate.queryForObject("SELECT status FROM user WHERE auth_id = 'kc-attacker-login'", String.class));
     }
 
     private static MockHttpServletRequestBuilder approve(String token) {

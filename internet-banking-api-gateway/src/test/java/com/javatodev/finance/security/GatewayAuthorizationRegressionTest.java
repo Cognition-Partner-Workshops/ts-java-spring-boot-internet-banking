@@ -85,6 +85,15 @@ class GatewayAuthorizationRegressionTest {
     }
 
     @Test
+    void actuatorEndpointsOtherThanHealthAreNotPublic() throws Exception {
+        for (String path : List.of("/fund-transfer/actuator/heapdump", "/fund-transfer/actuator/env", "/user/actuator/loggers")) {
+            HttpResponse<String> response = send("GET", path, null);
+            assertEquals(401, response.statusCode(), path + " answered " + response.statusCode());
+        }
+        assertEquals(List.of(), BACKEND_CALLS, "anonymous actuator request was proxied to a backend");
+    }
+
+    @Test
     void customerTokenCannotApproveRegistrations() throws Exception {
         HttpResponse<String> response = send("PATCH", "/user/api/v1/bank-users/update/1", TestJwt.customer("alice@example.com"));
         assertEquals(403, response.statusCode());

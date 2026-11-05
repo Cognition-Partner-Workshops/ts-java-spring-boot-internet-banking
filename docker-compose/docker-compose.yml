@@ -70,8 +70,9 @@ services:
   internet-banking-service-registry:
     image: javatodev/internet-banking-service-registry
     container_name: internet-banking-service-registry
-    ports:
-      - 8081:8081
+    # Registry has no authentication; keep it on javatodev_ib_network only.
+    expose:
+      - "8081"
     networks:
       javatodev_ib_network:
         ipv4_address: 172.25.0.7
