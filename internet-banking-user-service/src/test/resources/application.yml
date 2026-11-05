@@ -3,8 +3,8 @@ spring:
     name: internet-banking-user-service
   datasource:
     url: jdbc:h2:mem:banking_core_user_service
-    username: root
-    password: password
+    username: sa
+    password: ""
     driver-class-name: org.h2.Driver
   jpa:
     hibernate:
@@ -32,4 +32,4 @@ app:
       server-url: http://localhost:8080/auth
       realm: javatodev-internet-banking
       clientId: internet-banking-api-client
-      client-secret: e8548d56-d743-45ef-8655-063c9cd96759
+      client-secret: ${KEYCLOAK_CLIENT_SECRET:}

@@ -53,7 +53,8 @@ knowledge:
   - name: run
     contents: |
       Full stack is containerized. After `maintenance` builds the javatodev/* images:
-        cd docker-compose && docker compose up -d
+        cd docker-compose && cp -n .env.example .env  # fill in every value (secrets are not committed)
+        docker compose up -d
       Brings up: zipkin(9411), keycloak(8080)+postgres, mysql(3306), config-server(8090),
       eureka registry(8081), api-gateway(8082), user(8083), fund-transfer(8084),
       utility-payment(8085), core-banking(8092). App containers self-order via wait-for-it.sh.
@@ -65,8 +66,9 @@ knowledge:
       Auth smoke test (Keycloak password grant -> gateway):
         TOKEN=$(curl -s -X POST http://localhost:8080/realms/javatodev-internet-banking/protocol/openid-connect/token \
           -d grant_type=password -d client_id=javatodev-internet-banking-api-client \
-          -d client_secret=nVKeKJcoPbixsy2mxh9Yiy9azzGlA1V0 \
-          -d username=ib_admin@javatodev.com -d password=5V7huE3G86uB | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
+          -d client_secret="$IB_API_CLIENT_SECRET" \
+          -d username=ib_admin@javatodev.com -d password="$IB_ADMIN_USER_PASSWORD" | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
+        (IB_API_CLIENT_SECRET / IB_ADMIN_USER_PASSWORD come from docker-compose/.env: `set -a; . docker-compose/.env; set +a`)
         curl -H "Authorization: Bearer $TOKEN" http://localhost:8082/banking-core/api/v1/user
       Note: the postman env's client_id (internet-banking-core-client) is stale; use
       javatodev-internet-banking-api-client from the keycloak realm-export instead.

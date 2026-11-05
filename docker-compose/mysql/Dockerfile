@@ -1,3 +1,3 @@
 FROM mysql:8.4.0
-ENV MYSQL_ROOT_PASSWORD woVERANKliGharym
-COPY ./privileges.sql /docker-entrypoint-initdb.d/
+# MYSQL_ROOT_PASSWORD and MYSQL_APP_USER_PASSWORD are injected at run time by docker-compose (see ../.env.example)
+COPY ./privileges.sh /docker-entrypoint-initdb.d/

@@ -490,7 +490,7 @@
       "credentials": [
         {
           "type": "password",
-          "value": "5V7huE3G86uB"
+          "value": "${IB_ADMIN_USER_PASSWORD}"
         }
       ],
       "access": {
@@ -756,7 +756,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "nVKeKJcoPbixsy2mxh9Yiy9azzGlA1V0",
+      "secret": "${IB_API_CLIENT_SECRET}",
       "redirectUris": [
         "/*"
       ],
@@ -858,7 +858,7 @@
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
-      "secret": "koS4tPpw5xPqMX2cczBOmkWJIon7Ju3D",
+      "secret": "${IB_KC_API_CLIENT_SECRET}",
       "redirectUris": [
         "/*"
       ],
