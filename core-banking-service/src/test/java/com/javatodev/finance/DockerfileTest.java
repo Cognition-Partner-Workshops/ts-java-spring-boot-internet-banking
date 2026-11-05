@@ -1,0 +1,71 @@
+package com.javatodev.finance;
+
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Locale;
+import java.util.regex.Pattern;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class DockerfileTest {
+
+    @Test
+    void mysqlDockerfileDoesNotBakeSecretsIntoImage() throws IOException {
+        for (String line : Files.readAllLines(Path.of("../docker-compose/mysql/Dockerfile"))) {
+            String[] instruction = line.trim().split("\\s+", 2);
+            if (instruction.length < 2 || !instruction[0].matches("(?i)ENV|ARG")) {
+                continue;
+            }
+            String arguments = instruction[1];
+            List<String> keys = List.of(arguments.split("[\\s=]", 2)[0]);
+            if (arguments.startsWith(keys.get(0) + "=")) {
+                keys = Pattern.compile("(?:^|\\s)([A-Za-z_][A-Za-z0-9_]*)=")
+                        .matcher(arguments).results().map(match -> match.group(1)).toList();
+            }
+            for (String key : keys) {
+                assertFalse(key.matches("(?i).*(PASSWORD|SECRET|TOKEN).*"),
+                        "MySQL Dockerfile must not declare secret ENV or ARG keys");
+            }
+        }
+    }
+
+    @Test
+    void finalStageRunsAsNonRootUser() throws IOException {
+        List<String> lines = Files.readAllLines(Path.of("Dockerfile")).stream()
+                .map(String::trim)
+                .toList();
+        int finalStage = -1;
+        for (int i = 0; i < lines.size(); i++) {
+            if (lines.get(i).toUpperCase(Locale.ROOT).startsWith("FROM ")) {
+                finalStage = i;
+            }
+        }
+        assertTrue(finalStage >= 0, "Dockerfile must contain a FROM instruction");
+
+        int userLine = -1;
+        int commandLine = -1;
+        String user = "";
+        for (int i = finalStage + 1; i < lines.size(); i++) {
+            String line = lines.get(i);
+            String instruction = line.toUpperCase(Locale.ROOT);
+            if (instruction.startsWith("USER ")) {
+                userLine = i;
+                user = line.substring(5).trim().split("[\\s:]")[0];
+            }
+            if (commandLine < 0 && (instruction.startsWith("ENTRYPOINT ") || instruction.startsWith("CMD "))) {
+                commandLine = i;
+            }
+        }
+
+        assertTrue(userLine >= 0, "Final stage must declare a USER");
+        assertFalse(user.isEmpty() || user.equalsIgnoreCase("root") || user.matches("0+"),
+                "Final stage must use a non-root user");
+        assertTrue(commandLine >= 0, "Final stage must declare ENTRYPOINT or CMD");
+        assertTrue(userLine < commandLine, "USER must appear before ENTRYPOINT or CMD");
+    }
+}
