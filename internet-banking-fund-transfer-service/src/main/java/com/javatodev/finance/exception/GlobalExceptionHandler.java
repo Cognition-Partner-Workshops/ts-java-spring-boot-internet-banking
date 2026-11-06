@@ -1,5 +1,6 @@
 package com.javatodev.finance.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -7,6 +8,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import java.util.Locale;
 
+@Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
@@ -19,8 +21,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler({Exception.class})
     protected ResponseEntity handleException(Exception e, Locale locale) {
+        log.error("Unhandled exception while processing request", e);
         return ResponseEntity
             .badRequest()
-            .body("Exception occur inside API " + e);
+            .body(new ErrorResponse("INTERNAL_ERROR", "Unable to process the request"));
     }
 }
