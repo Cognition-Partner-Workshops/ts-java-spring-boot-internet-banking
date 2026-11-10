@@ -17,9 +17,13 @@ services:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloakdb:5432/keycloak
       KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: password
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: password
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD must be set (see docker-compose/.env.example)}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD must be set (see docker-compose/.env.example)}
+      # Substituted into keycloak/realm-export.json placeholders on --import-realm
+      IB_API_CLIENT_SECRET: ${IB_API_CLIENT_SECRET:?IB_API_CLIENT_SECRET must be set (see docker-compose/.env.example)}
+      IB_KC_API_CLIENT_SECRET: ${IB_KC_API_CLIENT_SECRET:?IB_KC_API_CLIENT_SECRET must be set (see docker-compose/.env.example)}
+      IB_ADMIN_USER_PASSWORD: ${IB_ADMIN_USER_PASSWORD:?IB_ADMIN_USER_PASSWORD must be set (see docker-compose/.env.example)}
     command: ["start-dev", "--import-realm"]
     depends_on:
       - keycloakdb
@@ -38,7 +42,7 @@ services:
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD must be set (see docker-compose/.env.example)}
     networks:
       javatodev_ib_network:
         ipv4_address: 172.25.0.10
@@ -47,7 +51,8 @@ services:
     build: mysql
     container_name: mysql_javatodev_app
     environment:
-      MYSQL_ROOT_PASSWORD: woVERANKliGharym
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set (see docker-compose/.env.example)}
+      MYSQL_APP_USER_PASSWORD: ${MYSQL_APP_USER_PASSWORD:?MYSQL_APP_USER_PASSWORD must be set (see docker-compose/.env.example)}
     ports:
       - 3306:3306
     volumes:
