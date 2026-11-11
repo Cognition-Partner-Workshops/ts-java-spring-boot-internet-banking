@@ -6,6 +6,7 @@ import com.javatodev.finance.service.KeycloakUserService;
 import com.javatodev.finance.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -27,14 +28,14 @@ public class UserController {
 
     @Operation(summary = "Register User", description = "Create a new user in the banking system")
     @PostMapping(value = "/register")
-    public ResponseEntity<User> createUser(@RequestBody User request) {
+    public ResponseEntity<User> createUser(@Valid @RequestBody User request) {
         log.info("Creating user with {}", request.toString());
         return ResponseEntity.ok(userService.createUser(request));
     }
 
     @Operation(summary = "Update User", description = "Update an existing user's information")
     @PatchMapping(value = "/update/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable("id") Long userId, @RequestBody UserUpdateRequest userUpdateRequest) {
+    public ResponseEntity<User> updateUser(@PathVariable("id") Long userId, @Valid @RequestBody UserUpdateRequest userUpdateRequest) {
         log.info("Updating user with {}", userUpdateRequest.toString());
         return ResponseEntity.ok(userService.updateUser(userId, userUpdateRequest));
     }

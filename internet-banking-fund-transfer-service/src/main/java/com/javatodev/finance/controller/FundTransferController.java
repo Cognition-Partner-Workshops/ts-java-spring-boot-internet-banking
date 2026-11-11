@@ -4,6 +4,7 @@ import com.javatodev.finance.model.dto.request.FundTransferRequest;
 import com.javatodev.finance.service.FundTransferService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +28,7 @@ public class FundTransferController {
 
     @Operation(summary = "Send Fund Transfer", description = "Process a fund transfer request")
     @PostMapping
-    public ResponseEntity sendFundTransfer(@RequestBody FundTransferRequest fundTransferRequest) {
+    public ResponseEntity sendFundTransfer(@Valid @RequestBody FundTransferRequest fundTransferRequest) {
         log.info("Got fund transfer request from API {}", fundTransferRequest.toString());
         return ResponseEntity.ok(fundTransferService.fundTransfer(fundTransferRequest));
     }

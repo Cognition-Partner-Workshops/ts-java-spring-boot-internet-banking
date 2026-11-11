@@ -4,6 +4,7 @@ import com.javatodev.finance.model.rest.request.UtilityPaymentRequest;
 import com.javatodev.finance.service.UtilityPaymentService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +33,7 @@ public class UtilityPaymentController {
 
     @Operation(summary = "Process Utility Payment", description = "Process a utility payment request")
     @PostMapping
-    public ResponseEntity processPayment(@RequestBody UtilityPaymentRequest paymentRequest) {
+    public ResponseEntity processPayment(@Valid @RequestBody UtilityPaymentRequest paymentRequest) {
         return ResponseEntity.ok(utilityPaymentService.utilPayment(paymentRequest));
     }
 

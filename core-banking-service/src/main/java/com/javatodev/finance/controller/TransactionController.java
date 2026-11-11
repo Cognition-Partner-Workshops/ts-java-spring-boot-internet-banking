@@ -5,6 +5,7 @@ import com.javatodev.finance.model.dto.request.UtilityPaymentRequest;
 import com.javatodev.finance.service.TransactionService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,7 +27,7 @@ public class TransactionController {
 
     @Operation(summary = "Fund Transfer", description = "Process a fund transfer request")
     @PostMapping("/fund-transfer")
-    public ResponseEntity fundTransfer(@RequestBody FundTransferRequest fundTransferRequest) {
+    public ResponseEntity fundTransfer(@Valid @RequestBody FundTransferRequest fundTransferRequest) {
 
         log.info("Fund transfer initiated in core bank from {}", fundTransferRequest.toString());
         return ResponseEntity.ok(transactionService.fundTransfer(fundTransferRequest));
@@ -35,7 +36,7 @@ public class TransactionController {
 
     @Operation(summary = "Utility Payment", description = "Process a utility payment request")
     @PostMapping("/util-payment")
-    public ResponseEntity utilPayment(@RequestBody UtilityPaymentRequest utilityPaymentRequest) {
+    public ResponseEntity utilPayment(@Valid @RequestBody UtilityPaymentRequest utilityPaymentRequest) {
 
         log.info("Utility Payment initiated in core bank from {}", utilityPaymentRequest.toString());
         return ResponseEntity.ok(transactionService.utilPayment(utilityPaymentRequest));
