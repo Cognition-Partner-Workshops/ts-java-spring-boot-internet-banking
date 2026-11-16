@@ -22,10 +22,16 @@ $ git clone https://github.com/JavatoDev-com/internet-banking-concept-microservi
 ```shell
 $ cd internet-banking-concept-microservices/docker-compose
 ```
-3. Start application using docker-compose:
+3. Build the service jars (compose builds the application images from these):
 
 ```shell
-$ docker-compose up -d
+$ for d in ../internet-banking-* ../core-banking-service; do (cd "$d" && ./gradlew bootJar -x test); done
+```
+
+4. Start application using docker-compose:
+
+```shell
+$ docker-compose up -d --build
 ```
 
 #### Docker Containers
